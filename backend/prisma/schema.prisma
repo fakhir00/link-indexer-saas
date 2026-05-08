@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         String     @default("user") // "user" or "admin"
+  isActive     Boolean    @default(true)
+  credits      Int        @default(500) // Starting credits
+  campaigns    Campaign[]
+  apiKeys      ApiKey[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Campaign {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  status      String   @default("pending") // pending, processing, paused, completed
+  dripPerDay  Int      @default(30)
+  urls        Url[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Url {
+  id             String    @id @default(uuid())
+  campaignId     String
+  campaign       Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  link           String
+  status         String    @default("queued") // queued, processing, submitted, failed, completed
+  retryCount     Int       @default(0)
+  maxRetries     Int       @default(3)
+  strategy       String?
+  errorMessage   String?
+  lastAttemptAt  DateTime?
+  discoveredAt   DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+model ApiKey {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash      String    @unique
+  label        String?
+  lastUsedAt   DateTime?
+  requestCount Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+}
