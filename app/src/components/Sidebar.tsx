@@ -49,9 +49,13 @@ const navGroups: NavGroup[] = [
   },
 ];
 
+import { useAuth } from '@/lib/AuthContext';
+
 export default function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+
 
   const isActive = (href: string) =>
     pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
@@ -122,10 +126,10 @@ export default function Sidebar() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
           <span style={{ color: 'var(--text-secondary)' }}>Credits</span>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>4,820 / 6,000</span>
+          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{user?.credits?.toLocaleString() || 0} / 6,000</span>
         </div>
         <div className="progress-bar">
-          <div className="progress-fill" style={{ width: '80%' }} />
+          <div className="progress-fill" style={{ width: `${Math.min(((user?.credits || 0) / 6000) * 100, 100)}%` }} />
         </div>
         <div style={{ marginTop: 10 }}>
           <Link href="/dashboard/billing" style={{ textDecoration: 'none' }}>
@@ -148,15 +152,15 @@ export default function Sidebar() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
         }}>
-          A
+          {user?.name?.[0] || 'A'}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Alex Morgan
+            {user?.name || 'Loading...'}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Admin</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>User</div>
         </div>
-        <Link href="/" style={{ color: 'var(--text-muted)' }}>
+        <Link href="/dashboard/settings" style={{ color: 'var(--text-muted)' }}>
           <Settings size={15} />
         </Link>
       </div>
