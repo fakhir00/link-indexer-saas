@@ -1,0 +1,16 @@
+{
+  "name": "link-indexer-saas",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "app",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --prefix app",
+    "build": "npm run build --prefix app",
+    "start": "npm run start --prefix app",
+    "backend:dev": "npm run dev --prefix backend",
+    "backend:start": "npm run start --prefix backend"
+  }
+}
