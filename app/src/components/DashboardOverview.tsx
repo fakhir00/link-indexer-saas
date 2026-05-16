@@ -1,67 +1,90 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { api, AnalyticsResponse } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Play, Pause, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardOverview() {
   const { user } = useAuth();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AnalyticsResponse | null>(null);
 
   useEffect(() => {
-    api.getAnalytics().then(setData).catch(console.error);
+    let mounted = true;
+
+    api
+      .getAnalytics()
+      .then((result) => {
+        if (mounted) setData(result);
+      })
+      .catch(() => {
+        if (mounted) setData(null);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  if (!data || !user) return <div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading dashboard...</div>;
+  if (!data || !user) {
+    return <div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading dashboard...</div>;
+  }
+
+  const statCards = [
+    { label: 'Total URLs Submitted', value: data.totalUrls.toLocaleString(), color: '#6366f1' },
+    { label: 'Active Campaigns', value: data.totalCampaigns.toLocaleString(), color: '#10b981' },
+    { label: 'Avg Success Rate', value: `${data.successRate}%`, color: '#8b5cf6' },
+    { label: 'Failed Extractions', value: data.failedUrls.toLocaleString(), color: '#ef4444' },
+  ];
 
   return (
     <div className="page-enter" style={{ padding: 28 }}>
       <div style={{ marginBottom: 28 }}>
-        <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 10 }}>
-          Welcome back, {user.name.split(' ')[0]} <span style={{ animation: 'pulse 2s infinite' }}>👋</span>
+        <h2
+          style={{
+            fontSize: 28,
+            fontWeight: 800,
+            marginBottom: 4,
+            letterSpacing: '-0.02em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          Welcome back, {user.firstName ?? user.name.split(' ')[0]} <span style={{ animation: 'pulse 2s infinite' }}>👋</span>
         </h2>
-        <p style={{ color: 'var(--text-secondary)' }}>Here is what's happening with your indexing campaigns.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Here is what&apos;s happening with your indexing campaigns.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
-        {[
-          { label: 'Total URLs Submitted', value: data.totalUrls.toLocaleString(), trend: '+12.5%', color: '#6366f1' },
-          { label: 'Active Campaigns', value: data.totalCampaigns.toLocaleString(), trend: '+2', color: '#10b981' },
-          { label: 'Avg Success Rate', value: `${data.successRate}%`, trend: '+4.1%', color: '#8b5cf6' },
-          { label: 'Failed Extractions', value: data.failedUrls.toLocaleString(), trend: '-1.2%', color: '#ef4444' },
-        ].map((stat, i) => (
-          <div key={i} className="stat-card">
+        {statCards.map((stat) => (
+          <div key={stat.label} className="stat-card">
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600 }}>{stat.label}</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: stat.color, letterSpacing: '-0.02em' }}>{stat.value}</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: stat.trend.startsWith('+') ? '#10b981' : '#ef4444', marginBottom: 6, background: 'var(--bg-surface-2)', padding: '2px 6px', borderRadius: 4 }}>
-                {stat.trend}
-              </div>
-            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: stat.color, letterSpacing: '-0.02em' }}>{stat.value}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
-        {/* Main Chart area */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>URL Discovery Trends</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Track how fast your URLs are being crawled across 14 days.</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Last 14 days of submissions, crawled URLs, and failures.</p>
             </div>
           </div>
           <div style={{ width: '100%', height: 260, minHeight: 260 }}>
-            {/* Kept empty data array since true timeseries isn't saved to DB yet */}
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={[]} margin={{ top: 0, right: 4, bottom: 0, left: -20 }}>
+              <AreaChart data={data.trends} margin={{ top: 0, right: 4, bottom: 0, left: -20 }}>
                 <defs>
                   <linearGradient id="submitted" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="crawled" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
@@ -69,32 +92,38 @@ export default function DashboardOverview() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
                 <Tooltip />
                 <Area type="monotone" dataKey="submitted" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#submitted)" />
+                <Area type="monotone" dataKey="crawled" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#crawled)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Recent Campaigns Widget */}
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700 }}>Recent Campaigns</h3>
-            <Link href="/dashboard/campaigns" className="btn-ghost" style={{ fontSize: 12, padding: '4px 8px', color: 'var(--text-brand)' }}>
+            <Link
+              href="/dashboard/campaigns"
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: '4px 8px', color: 'var(--text-brand)' }}
+            >
               View All &rarr;
             </Link>
           </div>
-          
+
           <div className="table-container" style={{ margin: 0 }}>
             <table>
               <tbody>
-                {data.recentCampaigns.map((c: any) => (
-                  <tr key={c.id}>
+                {data.recentCampaigns.map((campaign) => (
+                  <tr key={campaign.id}>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{campaign.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(campaign.createdAt).toLocaleDateString()}</div>
                     </td>
-                    <td><span className={`badge badge-${c.status}`}>{c.status}</span></td>
+                    <td>
+                      <span className={`badge badge-${campaign.status}`}>{campaign.status}</span>
+                    </td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: 12 }}>
-                      <Link href={`/dashboard/campaigns/${c.id}`} style={{ color: 'var(--text-brand)' }}>View &rarr;</Link>
+                      {campaign.totalUrls.toLocaleString()} URLs
                     </td>
                   </tr>
                 ))}

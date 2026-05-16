@@ -61,7 +61,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Manrope", "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg-base);
   color: var(--text-primary);
   line-height: 1.6;
@@ -381,7 +381,7 @@ tbody tr:hover { background: rgba(255,255,255,0.025); }
 }
 
 /* Code font */
-.code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.code { font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 
 /* Dividers */
 .divider {

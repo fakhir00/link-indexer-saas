@@ -1,74 +1,111 @@
 import { Worker, Job } from 'bullmq';
-import { connection } from './queue';
+import { connection, QUEUE_NAME } from './queue';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// This simulates pinging endpoints or calling IndexNow
-async function indexUrlStrategy(url: string): Promise<{ success: boolean; message: string }> {
-  // Simulate network latency (0.5 to 1.5 seconds)
-  await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-  
-  // Simulate 90% success rate
+async function indexUrlStrategy(_url: string): Promise<{ strategy: string }> {
+  await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 700));
   const isSuccess = Math.random() > 0.1;
-  if (isSuccess) {
-    return { success: true, message: 'Successfully pinged endpoints' };
-  } else {
+  if (!isSuccess) {
     throw new Error('Network timeout reaching ping endpoints');
+  }
+  return { strategy: 'Ping Strategy' };
+}
+
+async function refreshCampaignStatus(campaignId: string) {
+  const [total, completed, failed, processing, queued] = await Promise.all([
+    prisma.url.count({ where: { campaignId } }),
+    prisma.url.count({ where: { campaignId, status: 'completed' } }),
+    prisma.url.count({ where: { campaignId, status: 'failed' } }),
+    prisma.url.count({ where: { campaignId, status: 'processing' } }),
+    prisma.url.count({ where: { campaignId, status: 'queued' } }),
+  ]);
+
+  if (total > 0 && completed + failed === total) {
+    await prisma.campaign.update({ where: { id: campaignId }, data: { status: 'completed' } });
+    return;
+  }
+
+  if (processing > 0 || queued > 0) {
+    await prisma.campaign.update({ where: { id: campaignId }, data: { status: 'processing' } });
   }
 }
 
-const worker = new Worker('url-indexing-queue', async (job: Job) => {
-  const { urlId, url } = job.data;
-  console.log(`[Worker] Processing URL: ${url}`);
-
-  try {
-    // 1. Mark as processing
-    await prisma.url.update({
+const worker = new Worker(
+  QUEUE_NAME,
+  async (job: Job) => {
+    const { urlId, url } = job.data as { urlId: string; url: string };
+    const urlRecord = await prisma.url.findUnique({
       where: { id: urlId },
-      data: { status: 'processing', lastAttemptAt: new Date() }
+      include: { campaign: { select: { id: true, status: true } } },
     });
 
-    // 2. Execute indexing strategy
-    const result = await indexUrlStrategy(url);
+    if (!urlRecord?.campaign) {
+      return;
+    }
 
-    // 3. Mark as completed
+    if (urlRecord.campaign.status === 'paused') {
+      await prisma.url.update({
+        where: { id: urlId },
+        data: {
+          status: 'queued',
+          errorMessage: 'Campaign is paused',
+        },
+      });
+      return;
+    }
+
     await prisma.url.update({
       where: { id: urlId },
-      data: { 
-        status: 'completed', 
-        discoveredAt: new Date(),
-        strategy: 'Ping Strategy',
-        errorMessage: null
-      }
+      data: {
+        status: 'processing',
+        lastAttemptAt: new Date(),
+      },
     });
 
-    console.log(`[Worker] ✅ Success: ${url}`);
-
-  } catch (error: any) {
-    console.error(`[Worker] ❌ Failed: ${url}`, error.message);
-    
-    // Increment retry count and check if we hit max
-    const currentUrl = await prisma.url.findUnique({ where: { id: urlId } });
-    if (currentUrl) {
-      const newRetryCount = currentUrl.retryCount + 1;
-      const isFailed = newRetryCount >= currentUrl.maxRetries;
+    try {
+      const result = await indexUrlStrategy(url);
 
       await prisma.url.update({
         where: { id: urlId },
         data: {
-          status: isFailed ? 'failed' : 'queued',
-          retryCount: newRetryCount,
-          errorMessage: error.message
-        }
+          status: 'completed',
+          discoveredAt: new Date(),
+          strategy: result.strategy,
+          errorMessage: null,
+        },
       });
-      
-      // If not permanently failed, throw error to trigger BullMQ retry
-      if (!isFailed) throw error; 
-    }
-  }
-}, { connection, concurrency: 5 });
 
-worker.on('ready', () => console.log('👷 Worker is ready and listening to queue...'));
+      await refreshCampaignStatus(urlRecord.campaign.id);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown processing error';
+      const current = await prisma.url.findUnique({ where: { id: urlId } });
+      if (!current) return;
+
+      const newRetryCount = current.retryCount + 1;
+      const permanentlyFailed = newRetryCount >= current.maxRetries;
+
+      await prisma.url.update({
+        where: { id: urlId },
+        data: {
+          status: permanentlyFailed ? 'failed' : 'queued',
+          retryCount: newRetryCount,
+          errorMessage: message,
+        },
+      });
+
+      await refreshCampaignStatus(urlRecord.campaign.id);
+
+      if (!permanentlyFailed) {
+        throw new Error(message);
+      }
+    }
+  },
+  { connection, concurrency: Number(process.env.WORKER_CONCURRENCY ?? 5) },
+);
+
+worker.on('ready', () => console.log('Worker is ready and listening to queue...'));
+worker.on('error', (error) => console.error('Worker error:', error));
 
 export { worker };

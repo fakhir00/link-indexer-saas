@@ -1,5 +1,5 @@
 import TopBar from '@/components/TopBar';
-import { ShieldCheck, AlertTriangle, Lock, Eye } from 'lucide-react';
+import { ShieldCheck, Lock, Eye } from 'lucide-react';
 
 export default function AdminSecurity() {
   return (

@@ -1,29 +1,81 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Save, User, Bell, Lock, Globe } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function SettingsPage() {
-  const [name, setName] = useState('Alex Morgan');
-  const [email, setEmail] = useState('alex@indexflow.io');
-  const [webhookUrl, setWebhookUrl] = useState('https://hooks.example.com/indexflow');
+  const { user, refreshUser } = useAuth();
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [notifications, setNotifications] = useState({
     campaignComplete: true,
     urlFailed: true,
     creditsLow: true,
     weeklyReport: false,
   });
-  const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+    }
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      await api.updateMe({ name, email });
+      await refreshUser();
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save profile';
+      window.alert(message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      window.alert('Please fill all password fields.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      window.alert('New password and confirmation do not match.');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await api.changePassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      window.alert('Password updated successfully.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to change password';
+      window.alert(message);
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
     <div className="page-enter" style={{ padding: 28, maxWidth: 760 }}>
-
-      {/* Profile */}
       <div className="card" style={{ padding: 28, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
           <User size={18} color="#818cf8" />
@@ -31,71 +83,93 @@ export default function SettingsPage() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
-              Full Name
-            </label>
-            <input className="input" value={name} onChange={e => setName(e.target.value)} />
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Full Name</label>
+            <input className="input" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
-              Email Address
-            </label>
-            <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Email Address</label>
+            <input className="input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%',
-            background: 'var(--gradient-brand)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22, fontWeight: 700, color: '#fff',
-          }}>A</div>
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              background: 'var(--gradient-brand)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              fontWeight: 700,
+              color: '#fff',
+            }}
+          >
+            {(name || user?.name || 'A')[0].toUpperCase()}
+          </div>
           <div>
-            <button className="btn btn-secondary" style={{ fontSize: 13 }}>Upload Avatar</button>
+            <button className="btn btn-secondary" style={{ fontSize: 13 }} disabled>
+              Upload Avatar (soon)
+            </button>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>PNG or JPG, max 2MB</p>
           </div>
         </div>
       </div>
 
-      {/* Notifications */}
       <div className="card" style={{ padding: 28, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
           <Bell size={18} color="#06b6d4" />
           <h3 style={{ fontSize: 15, fontWeight: 700 }}>Notification Preferences</h3>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {Object.entries(notifications).map(([key, val]) => {
+          {Object.entries(notifications).map(([key, value]) => {
             const labels: Record<string, string> = {
               campaignComplete: 'Campaign completed',
               urlFailed: 'URL permanently failed (max retries)',
               creditsLow: 'Credits below 200',
               weeklyReport: 'Weekly performance digest',
             };
+
             return (
-              <div key={key} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 14px',
-                background: 'var(--bg-surface-2)',
-                borderRadius: 'var(--radius-md)',
-              }}>
+              <div
+                key={key}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: 'var(--bg-surface-2)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
                 <span style={{ fontSize: 14 }}>{labels[key]}</span>
                 <button
-                  onClick={() => setNotifications(p => ({ ...p, [key]: !val }))}
+                  onClick={() => setNotifications((previous) => ({ ...previous, [key]: !value }))}
                   style={{
-                    width: 44, height: 24, borderRadius: 12,
-                    background: val ? 'var(--brand-primary)' : 'var(--bg-surface-3)',
-                    border: 'none', cursor: 'pointer', position: 'relative',
+                    width: 44,
+                    height: 24,
+                    borderRadius: 12,
+                    background: value ? 'var(--brand-primary)' : 'var(--bg-surface-3)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    position: 'relative',
                     transition: 'background 0.2s',
                   }}
                 >
-                  <div style={{
-                    position: 'absolute', top: 3,
-                    left: val ? 22 : 3,
-                    width: 18, height: 18,
-                    borderRadius: '50%', background: '#fff',
-                    transition: 'left 0.2s',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                  }} />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 3,
+                      left: value ? 22 : 3,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    }}
+                  />
                 </button>
               </div>
             );
@@ -103,7 +177,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Webhook */}
       <div className="card" style={{ padding: 28, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
           <Globe size={18} color="#10b981" />
@@ -112,49 +185,42 @@ export default function SettingsPage() {
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
             Webhook URL
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>
-              (receives POST on URL status changes)
-            </span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>(receives POST on URL status changes)</span>
           </label>
-          <input
-            className="input"
-            type="url"
-            placeholder="https://your-app.com/webhook"
-            value={webhookUrl}
-            onChange={e => setWebhookUrl(e.target.value)}
-          />
+          <input className="input" type="url" placeholder="https://your-app.com/webhook" value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} />
         </div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          We'll send a POST request with the URL, status, and timestamp when a URL's status changes.
-          See <a href="#" style={{ color: 'var(--text-brand)' }}>webhook docs</a> for the full payload schema.
-        </p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Webhook delivery is coming in the next release.</p>
       </div>
 
-      {/* Password */}
       <div className="card" style={{ padding: 28, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
           <Lock size={18} color="#f59e0b" />
           <h3 style={{ fontSize: 15, fontWeight: 700 }}>Change Password</h3>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {['Current Password', 'New Password', 'Confirm New Password'].map((label) => (
-            <div key={label}>
-              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
-                {label}
-              </label>
-              <input className="input" type="password" placeholder="••••••••••••" />
-            </div>
-          ))}
+          <div>
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Current Password</label>
+            <input className="input" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} placeholder="••••••••••••" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>New Password</label>
+            <input className="input" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="••••••••••••" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Confirm New Password</label>
+            <input className="input" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="••••••••••••" />
+          </div>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <button className="btn btn-secondary" onClick={() => void handleChangePassword()} disabled={changingPassword}>
+            {changingPassword ? 'Updating…' : 'Update Password'}
+          </button>
         </div>
       </div>
 
-      <button
-        className="btn btn-primary"
-        onClick={handleSave}
-        style={{ padding: '11px 28px', fontSize: 14, gap: 8 }}
-      >
+      <button className="btn btn-primary" onClick={() => void handleSaveProfile()} style={{ padding: '11px 28px', fontSize: 14, gap: 8 }} disabled={savingProfile}>
         <Save size={15} />
-        {saved ? '✓ Saved!' : 'Save Changes'}
+        {profileSaved ? '✓ Saved!' : savingProfile ? 'Saving…' : 'Save Profile'}
       </button>
     </div>
   );

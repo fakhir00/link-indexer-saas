@@ -1,7 +1,6 @@
 'use client';
 
-import { Bell, Search, Plus, LogOut } from 'lucide-react';
-import { useAuth } from '@/lib/AuthContext';
+import { Bell, Search, Plus } from 'lucide-react';
 
 interface TopBarProps {
   title: string;
@@ -13,8 +12,6 @@ interface TopBarProps {
 }
 
 export default function TopBar({ title, subtitle, action }: TopBarProps) {
-  const { user, logout } = useAuth();
-
   return (
     <header style={{
       height: 64,
