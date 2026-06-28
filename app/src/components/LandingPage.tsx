@@ -28,7 +28,7 @@ export default function LandingPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-            {['Features', 'Pricing', 'Docs', 'Blog'].map((item) => (
+            {['Features', 'Plans'].map((item) => (
               <a key={item} href={`#${item.toLowerCase()}`} style={{
                 padding: '7px 14px', borderRadius: 'var(--radius-md)',
                 fontSize: 14, color: 'var(--text-secondary)', textDecoration: 'none',
@@ -43,12 +43,12 @@ export default function LandingPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <Link href="/dashboard">
+            <Link href="/login">
               <button className="btn btn-ghost" style={{ fontSize: 14 }}>Sign In</button>
             </Link>
-            <Link href="/dashboard">
+            <Link href="/login">
               <button className="btn btn-primary" style={{ fontSize: 14 }}>
-                Get Started Free <ArrowRight size={14} />
+                Open Dashboard <ArrowRight size={14} />
               </button>
             </Link>
           </div>
@@ -68,7 +68,7 @@ export default function LandingPage() {
           fontSize: 13, fontWeight: 600, color: '#818cf8',
         }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} className="animate-pulse-glow" />
-          Now in public beta — 500 free credits to start
+          Closed beta — admin-provisioned access
         </div>
 
         <h1 style={{
@@ -81,7 +81,7 @@ export default function LandingPage() {
           Get Your URLs{' '}
           <span className="gradient-text">Discovered Faster</span>
           <br />
-          by Google
+          by Search Engines
         </h1>
 
         <p style={{
@@ -90,38 +90,18 @@ export default function LandingPage() {
           maxWidth: 600, margin: '0 auto 36px',
           lineHeight: 1.6,
         }}>
-          IndexFlow submits your URLs through multiple discovery channels simultaneously —
-          ping endpoints, sitemaps, Search Console API and buffer networks — to accelerate
-          crawl discovery at scale.
+          IndexFlow queues, validates and submits URLs through configurable discovery channels
+          like ping endpoints and IndexNow, then tracks campaign progress with retries and
+          operational controls for SEO teams.
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/dashboard">
+          <Link href="/login">
             <button className="btn btn-primary" style={{ padding: '13px 28px', fontSize: 15, gap: 8 }}>
-              Start Indexing Now — Free
+              Sign In
               <ArrowRight size={16} />
             </button>
           </Link>
-          <button className="btn btn-secondary" style={{ padding: '13px 28px', fontSize: 15 }}>
-            View Live Demo →
-          </button>
-        </div>
-
-        {/* Social proof */}
-        <div style={{ marginTop: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32, flexWrap: 'wrap' }}>
-          {[
-            { val: '12M+', label: 'URLs Submitted' },
-            { val: '87%', label: 'Avg Success Rate' },
-            { val: '4,200+', label: 'Active Users' },
-            { val: '2.4s', label: 'Avg Discovery Time' },
-          ].map((s) => (
-            <div key={s.label} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.03em' }} className="gradient-text">
-                {s.val}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -191,7 +171,7 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              {/* Mini chart mockup */}
+              {/* Mini chart preview */}
               <div style={{
                 background: 'var(--bg-surface-2)', borderRadius: 'var(--radius-md)',
                 padding: '14px', border: '1px solid var(--border-subtle)',
@@ -229,7 +209,7 @@ export default function LandingPage() {
             {
               icon: <Zap size={22} />, color: '#6366f1',
               title: 'Multi-Channel Engine',
-              desc: '4 parallel indexing strategies — ping, sitemaps, API submission and buffer networks — fire simultaneously for maximum discovery.',
+              desc: 'Run configurable provider strategies such as ping endpoints and IndexNow, with a deterministic dry-run mode for local testing.',
             },
             {
               icon: <RefreshCw size={22} />, color: '#10b981',
@@ -239,7 +219,7 @@ export default function LandingPage() {
             {
               icon: <BarChart3 size={22} />, color: '#06b6d4',
               title: 'Real-Time Analytics',
-              desc: 'Track submissions, discovery rates, strategy performance and campaign health in beautiful live dashboards.',
+              desc: 'Track submissions, completion rates, failures and campaign health in live dashboards backed by the API.',
             },
             {
               icon: <Globe size={22} />, color: '#f59e0b',
@@ -248,13 +228,13 @@ export default function LandingPage() {
             },
             {
               icon: <Key size={22} />, color: '#818cf8',
-              title: 'REST API + Webhooks',
-              desc: 'Full REST API with API key auth, rate limiting and webhook callbacks for real-time status integration.',
+              title: 'REST API + API Keys',
+              desc: 'Generate scoped API keys and submit campaigns from external systems without sharing dashboard credentials.',
             },
             {
               icon: <Shield size={22} />, color: '#10b981',
-              title: 'Credit-Based Billing',
-              desc: 'Pay only for what you process. Transparent credit system with Stripe billing and instant top-ups.',
+              title: 'Admin-Managed Credits',
+              desc: 'Assign credits from the admin console, monitor usage and keep campaign creation tied to available balance.',
             },
           ].map((f) => (
             <div key={f.title} className="card" style={{ padding: 28 }}>
@@ -306,13 +286,13 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" style={{ maxWidth: 1160, margin: '0 auto 80px', padding: '0 24px' }}>
+      <section id="plans" style={{ maxWidth: 1160, margin: '0 auto 80px', padding: '0 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <h2 style={{ fontSize: 'clamp(28px, 3vw, 44px)', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 14 }}>
-            Simple, scalable pricing
+            Simple credit tiers
           </h2>
           <p style={{ fontSize: 16, color: 'var(--text-secondary)' }}>
-            Credits never expire within a billing cycle. Cancel anytime.
+            Admins assign the tier and credits that match each workspace.
           </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
@@ -330,10 +310,6 @@ export default function LandingPage() {
                 </div>
               )}
               <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>{plan.name}</div>
-              <div style={{ marginBottom: 14 }}>
-                <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: '-0.04em' }}>${plan.price}</span>
-                <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>/month</span>
-              </div>
               <div style={{
                 padding: '8px 14px', background: 'var(--bg-surface-2)',
                 borderRadius: 'var(--radius-md)', marginBottom: 20,
@@ -349,9 +325,9 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              <Link href="/dashboard">
+              <Link href="/login">
                 <button className={`btn ${plan.isPopular ? 'btn-primary' : 'btn-secondary'}`} style={{ width: '100%' }}>
-                  Get Started
+                  Sign In
                 </button>
               </Link>
             </div>
@@ -371,11 +347,11 @@ export default function LandingPage() {
             Ready to accelerate your crawl?
           </h2>
           <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 32 }}>
-            Join 4,200+ SEOs and agencies already using IndexFlow to get their content discovered faster.
+            Ask your administrator for an account, then submit campaigns and monitor every URL from one dashboard.
           </p>
-          <Link href="/dashboard">
+          <Link href="/login">
             <button className="btn btn-primary" style={{ padding: '14px 36px', fontSize: 16 }}>
-              Start Free — 500 Credits No Card Required
+              Sign In to Dashboard
             </button>
           </Link>
         </div>
@@ -393,7 +369,7 @@ export default function LandingPage() {
           <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>⚡</div>
           <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>IndexFlow</span>
         </div>
-        <p>© 2024 IndexFlow. All rights reserved. · Not affiliated with Google LLC.</p>
+        <p>© 2026 IndexFlow. All rights reserved. · Not affiliated with Google LLC.</p>
         <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 12 }}>
           {['Privacy Policy', 'Terms of Service', 'Documentation', 'Status'].map((l) => (
             <a key={l} href="#" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{l}</a>

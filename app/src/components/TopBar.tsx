@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface TopBarProps {
   title: string;
@@ -42,57 +42,6 @@ export default function TopBar({ title, subtitle, action }: TopBarProps) {
           </p>
         )}
       </div>
-
-      {/* Search */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        background: 'var(--bg-surface-2)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-md)',
-        padding: '7px 12px',
-        cursor: 'text',
-        minWidth: 200,
-      }}>
-        <Search size={14} style={{ color: 'var(--text-muted)' }} />
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Search…</span>
-        <div style={{
-          marginLeft: 'auto',
-          background: 'var(--bg-surface-3)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 4,
-          padding: '1px 6px',
-          fontSize: 11,
-          color: 'var(--text-muted)',
-          fontFamily: 'var(--font-mono)',
-        }}>
-          ⌘K
-        </div>
-      </div>
-
-      {/* Notification bell */}
-      <button style={{
-        position: 'relative',
-        background: 'var(--bg-surface-2)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-md)',
-        padding: '8px',
-        cursor: 'pointer',
-        color: 'var(--text-secondary)',
-        display: 'flex',
-        alignItems: 'center',
-      }}>
-        <Bell size={16} />
-        <div style={{
-          position: 'absolute',
-          top: 6, right: 6,
-          width: 6, height: 6,
-          borderRadius: '50%',
-          background: 'var(--brand-primary)',
-          border: '1px solid var(--bg-surface)',
-        }} />
-      </button>
 
       {/* CTA action */}
       {action && (

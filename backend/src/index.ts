@@ -3,10 +3,11 @@ import cors, { CorsOptions } from 'cors';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { prisma } from './prisma';
 import { indexQueue, getQueueSnapshot, connection } from './queue';
 import { generateToken, requireAdmin, requireAuth, AuthRequest } from './auth';
+import { getEnabledIndexingStrategies } from './indexing-strategies';
 
 dotenv.config();
 
@@ -16,13 +17,13 @@ if (process.env.ENABLE_INLINE_WORKER === 'true') {
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
-const prisma = new PrismaClient();
 
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+const ALLOW_PUBLIC_SIGNUPS = process.env.ALLOW_PUBLIC_SIGNUPS === 'true';
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
@@ -89,6 +90,19 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
+const adminCreateUserSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+  name: z.string().trim().min(2).max(80),
+  role: z.enum(['user', 'admin']).optional().default('user'),
+  credits: z.number().int().min(0).max(10_000_000).optional().default(500),
+  isActive: z.boolean().optional().default(true),
+});
+
+const adminCreditsSchema = z.object({
+  credits: z.number().int().min(0).max(10_000_000),
+});
+
 class HttpError extends Error {
   status: number;
   details?: unknown;
@@ -119,6 +133,62 @@ function generateApiKey() {
 
 function maskFromId(id: string) {
   return `if_live_sk_••••••••${id.slice(-6)}`;
+}
+
+function getApiKeyFromRequest(req: Request) {
+  const headerKey = req.header('x-api-key')?.trim();
+  if (headerKey) return headerKey;
+
+  const authHeader = req.headers.authorization?.trim();
+  if (!authHeader) return null;
+
+  if (authHeader.startsWith('ApiKey ')) {
+    return authHeader.slice('ApiKey '.length).trim();
+  }
+
+  if (authHeader.startsWith('Bearer if_live_sk_') || authHeader.startsWith('Bearer if_test_sk_')) {
+    return authHeader.slice('Bearer '.length).trim();
+  }
+
+  return null;
+}
+
+async function requireUserAccess(req: AuthRequest, res: Response, next: NextFunction) {
+  const apiKey = getApiKeyFromRequest(req);
+
+  if (!apiKey) {
+    return requireAuth(req, res, next);
+  }
+
+  const keyRecord = await prisma.apiKey.findFirst({
+    where: {
+      keyHash: hashApiKey(apiKey),
+      isActive: true,
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!keyRecord || !keyRecord.user.isActive) {
+    return res.status(401).json({ error: 'Unauthorized: API key is invalid or revoked' });
+  }
+
+  await prisma.apiKey.update({
+    where: { id: keyRecord.id },
+    data: {
+      lastUsedAt: new Date(),
+      requestCount: { increment: 1 },
+    },
+  });
+
+  req.user = {
+    id: keyRecord.user.id,
+    email: keyRecord.user.email,
+    role: keyRecord.user.role,
+  };
+
+  return next();
 }
 
 function firstName(name: string) {
@@ -213,6 +283,10 @@ app.get('/health', async (_req, res) => {
 });
 
 app.post('/auth/register', async (req, res) => {
+  if (!ALLOW_PUBLIC_SIGNUPS) {
+    throw new HttpError(403, 'Public signup is disabled. Ask an administrator to create your account.');
+  }
+
   const { email, password, name } = parseOrThrow(registerSchema, req.body);
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -356,7 +430,7 @@ app.post('/auth/change-password', requireAuth, async (req: AuthRequest, res) => 
   res.json({ success: true });
 });
 
-app.get('/analytics', requireAuth, async (req: AuthRequest, res) => {
+app.get('/analytics', requireUserAccess, async (req: AuthRequest, res) => {
   const userId = req.user!.id;
   const now = new Date();
   const start = new Date(now);
@@ -435,7 +509,7 @@ app.get('/analytics', requireAuth, async (req: AuthRequest, res) => {
   });
 });
 
-app.get('/campaigns', requireAuth, async (req: AuthRequest, res) => {
+app.get('/campaigns', requireUserAccess, async (req: AuthRequest, res) => {
   const campaigns = await prisma.campaign.findMany({
     where: { userId: req.user!.id },
     include: {
@@ -480,7 +554,7 @@ app.get('/campaigns', requireAuth, async (req: AuthRequest, res) => {
   res.json(result);
 });
 
-app.post('/campaigns', requireAuth, async (req: AuthRequest, res) => {
+app.post('/campaigns', requireUserAccess, async (req: AuthRequest, res) => {
   const input = parseOrThrow(createCampaignSchema, req.body);
   const urls = uniqueNormalizedUrls(input.urls);
 
@@ -556,7 +630,7 @@ app.post('/campaigns', requireAuth, async (req: AuthRequest, res) => {
   });
 });
 
-app.patch('/campaigns/:id/status', requireAuth, async (req: AuthRequest, res) => {
+app.patch('/campaigns/:id/status', requireUserAccess, async (req: AuthRequest, res) => {
   const { status } = parseOrThrow(statusUpdateSchema, req.body);
   const campaignId = String(req.params.id);
 
@@ -575,7 +649,7 @@ app.patch('/campaigns/:id/status', requireAuth, async (req: AuthRequest, res) =>
   res.json({ success: true });
 });
 
-app.delete('/campaigns/:id', requireAuth, async (req: AuthRequest, res) => {
+app.delete('/campaigns/:id', requireUserAccess, async (req: AuthRequest, res) => {
   const campaignId = String(req.params.id);
   const deleted = await prisma.campaign.deleteMany({
     where: {
@@ -591,7 +665,7 @@ app.delete('/campaigns/:id', requireAuth, async (req: AuthRequest, res) => {
   res.json({ success: true });
 });
 
-app.get('/urls', requireAuth, async (req: AuthRequest, res) => {
+app.get('/urls', requireUserAccess, async (req: AuthRequest, res) => {
   const { status, limit, offset, search, campaignId } = parseOrThrow(urlsQuerySchema, req.query);
 
   const whereClause = {
@@ -624,7 +698,7 @@ app.get('/urls', requireAuth, async (req: AuthRequest, res) => {
   res.json({ urls, total, limit, offset });
 });
 
-app.post('/urls/:id/retry', requireAuth, async (req: AuthRequest, res) => {
+app.post('/urls/:id/retry', requireUserAccess, async (req: AuthRequest, res) => {
   const urlId = String(req.params.id);
   const url = await prisma.url.findFirst({
     where: {
@@ -660,7 +734,7 @@ app.post('/urls/:id/retry', requireAuth, async (req: AuthRequest, res) => {
   res.json({ success: true });
 });
 
-app.post('/urls/retry-failed', requireAuth, async (req: AuthRequest, res) => {
+app.post('/urls/retry-failed', requireUserAccess, async (req: AuthRequest, res) => {
   const failedUrls = await prisma.url.findMany({
     where: {
       campaign: { userId: req.user!.id },
@@ -800,13 +874,39 @@ app.get('/billing/overview', requireAuth, async (req: AuthRequest, res) => {
       cycleStart: month.start.toISOString(),
       cycleEnd: month.end.toISOString(),
     },
-    payments: [],
   });
 });
 
-app.post('/billing/checkout', requireAuth, async (_req: AuthRequest, res) => {
-  res.status(501).json({
-    error: 'Stripe checkout is not configured yet. Set STRIPE_SECRET_KEY and implement product prices to enable checkout.',
+app.post('/admin/users', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  const input = parseOrThrow(adminCreateUserSchema, req.body);
+  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+
+  if (existing) {
+    throw new HttpError(409, 'Email already exists');
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+  const user = await prisma.user.create({
+    data: {
+      email: input.email,
+      name: input.name,
+      passwordHash,
+      role: input.role,
+      credits: input.credits,
+      isActive: input.isActive,
+    },
+  });
+
+  res.status(201).json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    isActive: user.isActive,
+    credits: user.credits,
+    campaigns: 0,
+    totalUrls: 0,
+    createdAt: user.createdAt,
   });
 });
 
@@ -861,6 +961,20 @@ app.get('/admin/users', requireAuth, requireAdmin, async (_req: AuthRequest, res
   );
 });
 
+app.patch('/admin/users/:id/credits', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  const { credits } = parseOrThrow(adminCreditsSchema, req.body);
+  const targetUserId = String(req.params.id);
+  const user = await prisma.user.update({
+    where: { id: targetUserId },
+    data: { credits },
+  });
+
+  res.json({
+    id: user.id,
+    credits: user.credits,
+  });
+});
+
 app.patch('/admin/users/:id/active', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   const payload = z.object({ isActive: z.boolean() }).safeParse(req.body);
   if (!payload.success) {
@@ -897,7 +1011,9 @@ app.get('/admin/system', requireAuth, requireAdmin, async (_req: AuthRequest, re
 
   res.json({
     queue,
-    workersActive: queue.active,
+    activeJobs: queue.active,
+    workerConcurrency: Number(process.env.WORKER_CONCURRENCY ?? 5),
+    enabledIndexingStrategies: getEnabledIndexingStrategies(),
     dbConnected: dbStatus,
     redisConnected: redisStatus,
     averageProcessingTime,

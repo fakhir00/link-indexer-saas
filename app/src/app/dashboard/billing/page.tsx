@@ -5,8 +5,8 @@ export default function Billing() {
   return (
     <>
       <TopBar
-        title="Billing & Credits"
-        subtitle="Manage your subscription, credits and payment history"
+        title="Credits"
+        subtitle="Track usage and admin-managed credit allocation"
       />
       <BillingPage />
     </>

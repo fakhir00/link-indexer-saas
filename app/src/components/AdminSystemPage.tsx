@@ -14,7 +14,9 @@ interface SystemHealth {
     paused: number;
     total: number;
   };
-  workersActive: number;
+  activeJobs: number;
+  workerConcurrency: number;
+  enabledIndexingStrategies: string[];
   dbConnected: boolean;
   redisConnected: boolean;
   averageProcessingTime: number;
@@ -86,7 +88,7 @@ export default function AdminSystemPage() {
             System Status: {health.apiStatus === 'healthy' ? '✓ All Systems Operational' : '⚠ Degraded Performance'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-            Last checked: just now · Avg processing: {health.averageProcessingTime}s/URL
+            Last checked: just now · Strategies: {health.enabledIndexingStrategies.join(', ') || 'None'}
           </div>
         </div>
       </div>
@@ -94,7 +96,7 @@ export default function AdminSystemPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
         {[
           { label: 'Queue Size', value: health.queue.waiting.toLocaleString(), icon: <Activity size={20} />, color: '#6366f1', sub: 'URLs waiting' },
-          { label: 'Active Workers', value: health.workersActive.toString(), icon: <Server size={20} />, color: '#10b981', sub: 'Processing now' },
+          { label: 'Worker Capacity', value: health.workerConcurrency.toString(), icon: <Server size={20} />, color: '#10b981', sub: 'Configured concurrency' },
           { label: 'Avg Processing', value: `${health.averageProcessingTime}s`, icon: <Clock size={20} />, color: '#06b6d4', sub: 'Per URL' },
           { label: 'DB Status', value: health.dbConnected ? 'Online' : 'Offline', icon: <Database size={20} />, color: health.dbConnected ? '#10b981' : '#ef4444', sub: 'Connection health' },
         ].map((item) => (
@@ -130,7 +132,7 @@ export default function AdminSystemPage() {
               { label: 'PostgreSQL Database', ok: health.dbConnected, icon: <Database size={16} /> },
               { label: 'Redis / BullMQ Queue', ok: health.redisConnected, icon: <Activity size={16} /> },
               { label: 'REST API Layer', ok: health.apiStatus === 'healthy', icon: <Wifi size={16} /> },
-              { label: 'Worker Pool', ok: health.workersActive > 0, icon: <Server size={16} /> },
+              { label: 'Indexing Strategy', ok: health.enabledIndexingStrategies.length > 0, icon: <Server size={16} /> },
             ].map((item) => (
               <div
                 key={item.label}

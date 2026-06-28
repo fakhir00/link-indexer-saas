@@ -1,17 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { connection, QUEUE_NAME } from './queue';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-async function indexUrlStrategy(_url: string): Promise<{ strategy: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 700));
-  const isSuccess = Math.random() > 0.1;
-  if (!isSuccess) {
-    throw new Error('Network timeout reaching ping endpoints');
-  }
-  return { strategy: 'Ping Strategy' };
-}
+import { prisma } from './prisma';
+import { submitUrlToIndexingProviders } from './indexing-strategies';
 
 async function refreshCampaignStatus(campaignId: string) {
   const [total, completed, failed, processing, queued] = await Promise.all([
@@ -65,14 +55,14 @@ const worker = new Worker(
     });
 
     try {
-      const result = await indexUrlStrategy(url);
+      const results = await submitUrlToIndexingProviders(url);
 
       await prisma.url.update({
         where: { id: urlId },
         data: {
           status: 'completed',
           discoveredAt: new Date(),
-          strategy: result.strategy,
+          strategy: results.map((result) => result.strategy).join(', '),
           errorMessage: null,
         },
       });

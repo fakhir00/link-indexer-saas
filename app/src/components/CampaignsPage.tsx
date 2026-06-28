@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, Campaign } from '@/lib/api';
-import { Plus, Search, Filter, Play, Pause, Trash2, Upload, AlertCircle } from 'lucide-react';
+import { Plus, Search, Play, Pause, Trash2, Upload, AlertCircle } from 'lucide-react';
 
 const STATUS_FILTERS: Array<{ label: string; value: 'all' | Campaign['status'] }> = [
   { label: 'All', value: 'all' },
@@ -20,6 +20,7 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [newCampName, setNewCampName] = useState('');
   const [newCampUrls, setNewCampUrls] = useState('');
@@ -68,6 +69,24 @@ export default function CampaignsPage() {
     }
   };
 
+  const handleFileImport = async (file: File) => {
+    const content = await file.text();
+    const importedUrls = content
+      .split(/[\n,]+/)
+      .map((value) => value.trim().replace(/^"|"$/g, ''))
+      .filter(Boolean);
+
+    if (importedUrls.length === 0) {
+      window.alert('No URLs found in that file.');
+      return;
+    }
+
+    setNewCampUrls((current) => {
+      const existing = current.trim();
+      return existing ? `${existing}\n${importedUrls.join('\n')}` : importedUrls.join('\n');
+    });
+  };
+
   const handleAction = async (id: string, action: 'delete' | 'paused' | 'processing') => {
     try {
       if (action === 'delete') {
@@ -109,9 +128,6 @@ export default function CampaignsPage() {
           />
           <input className="input" style={{ paddingLeft: 36 }} placeholder="Search campaigns…" value={search} onChange={(event) => setSearch(event.target.value)} />
         </div>
-        <button className="btn btn-secondary" style={{ gap: 6 }}>
-          <Filter size={14} /> Filter
-        </button>
         <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ gap: 6 }}>
           <Plus size={15} /> New Campaign
         </button>
@@ -161,11 +177,22 @@ export default function CampaignsPage() {
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>URLs (1 per line)</label>
               <button
                 className="btn-ghost"
-                style={{ fontSize: 12, color: 'var(--text-brand)', background: 'none', border: 'none', padding: 0, cursor: 'default' }}
-                disabled
+                style={{ fontSize: 12, color: 'var(--text-brand)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                onClick={() => fileInputRef.current?.click()}
               >
-                <Upload size={12} style={{ display: 'inline', marginRight: 4 }} /> Upload CSV (soon)
+                <Upload size={12} style={{ display: 'inline', marginRight: 4 }} /> Import CSV
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv,text/plain"
+                style={{ display: 'none' }}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void handleFileImport(file);
+                  event.currentTarget.value = '';
+                }}
+              />
             </div>
             <textarea
               className="input"

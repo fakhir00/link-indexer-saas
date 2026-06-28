@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "seed:admin": "tsx src/seed-admin.ts",
     "start:worker": "node dist/worker.js",
     "dev:api": "tsx watch src/index.ts",
     "dev": "tsx watch src/index.ts"
@@ -20,6 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.76.6",
     "cors": "^2.8.6",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Save, User, Bell, Lock, Globe } from 'lucide-react';
+import { Save, User, Lock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -10,13 +10,6 @@ export default function SettingsPage() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [notifications, setNotifications] = useState({
-    campaignComplete: true,
-    urlFailed: true,
-    creditsLow: true,
-    weeklyReport: false,
-  });
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
@@ -91,105 +84,6 @@ export default function SettingsPage() {
             <input className="input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              background: 'var(--gradient-brand)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 22,
-              fontWeight: 700,
-              color: '#fff',
-            }}
-          >
-            {(name || user?.name || 'A')[0].toUpperCase()}
-          </div>
-          <div>
-            <button className="btn btn-secondary" style={{ fontSize: 13 }} disabled>
-              Upload Avatar (soon)
-            </button>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>PNG or JPG, max 2MB</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: 28, marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-          <Bell size={18} color="#06b6d4" />
-          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Notification Preferences</h3>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {Object.entries(notifications).map(([key, value]) => {
-            const labels: Record<string, string> = {
-              campaignComplete: 'Campaign completed',
-              urlFailed: 'URL permanently failed (max retries)',
-              creditsLow: 'Credits below 200',
-              weeklyReport: 'Weekly performance digest',
-            };
-
-            return (
-              <div
-                key={key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  background: 'var(--bg-surface-2)',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
-                <span style={{ fontSize: 14 }}>{labels[key]}</span>
-                <button
-                  onClick={() => setNotifications((previous) => ({ ...previous, [key]: !value }))}
-                  style={{
-                    width: 44,
-                    height: 24,
-                    borderRadius: 12,
-                    background: value ? 'var(--brand-primary)' : 'var(--bg-surface-3)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    transition: 'background 0.2s',
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 3,
-                      left: value ? 22 : 3,
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      background: '#fff',
-                      transition: 'left 0.2s',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                    }}
-                  />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: 28, marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-          <Globe size={18} color="#10b981" />
-          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Webhook Settings</h3>
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
-            Webhook URL
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>(receives POST on URL status changes)</span>
-          </label>
-          <input className="input" type="url" placeholder="https://your-app.com/webhook" value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} />
-        </div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Webhook delivery is coming in the next release.</p>
       </div>
 
       <div className="card" style={{ padding: 28, marginBottom: 24 }}>

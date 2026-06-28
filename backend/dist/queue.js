@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.indexQueue = exports.connection = exports.QUEUE_NAME = void 0;
 exports.getQueueSnapshot = getQueueSnapshot;
+require("dotenv/config");
 const bullmq_1 = require("bullmq");
 const ioredis_1 = __importDefault(require("ioredis"));
 const redisUrl = process.env.REDIS_URL;

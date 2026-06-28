@@ -4,13 +4,11 @@ import { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { login, register } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -18,11 +16,7 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      if (isLogin) {
-        await login(email, password);
-      } else {
-        await register(name, email, password);
-      }
+      await login(email, password);
     } catch (caughtError: unknown) {
       setError(caughtError instanceof Error ? caughtError.message : 'Authentication failed');
     } finally {
@@ -49,19 +43,13 @@ export default function LoginPage() {
           >
             ⚡
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 800 }}>Welcome to IndexFlow</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Get your URLs discovered faster.</p>
+          <h2 style={{ fontSize: 24, fontWeight: 800 }}>Sign in to IndexFlow</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Use the account your administrator created.</p>
         </div>
 
         {error && <div className="alert alert-error" style={{ marginBottom: 20 }}>{error}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {!isLogin && (
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Name</label>
-              <input required className="input" value={name} onChange={(event) => setName(event.target.value)} />
-            </div>
-          )}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Email</label>
             <input required type="email" className="input" value={email} onChange={(event) => setEmail(event.target.value)} />
@@ -72,16 +60,9 @@ export default function LoginPage() {
           </div>
 
           <button type="submit" className="btn btn-primary" style={{ marginTop: 10, padding: 12 }} disabled={submitting}>
-            {submitting ? 'Please wait…' : isLogin ? 'Sign In' : 'Create Account'}
+            {submitting ? 'Please wait…' : 'Sign In'}
           </button>
         </form>
-
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'var(--text-secondary)' }}>
-          {isLogin ? 'Do not have an account? ' : 'Already have an account? '}
-          <button className="btn-ghost" style={{ border: 'none', padding: 0, color: 'var(--text-brand)' }} onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? 'Sign Up' : 'Log In'}
-          </button>
-        </div>
       </div>
     </div>
   );

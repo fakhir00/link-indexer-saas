@@ -87,17 +87,6 @@ export interface CreditsWallet {
   updatedAt: string;
 }
 
-export interface Payment {
-  id: string;
-  userId: string;
-  amount: number;
-  credits: number;
-  plan: PlanType;
-  status: 'pending' | 'succeeded' | 'failed';
-  stripeSessionId?: string;
-  createdAt: string;
-}
-
 export interface ApiKey {
   id: string;
   userId: string;
@@ -129,7 +118,9 @@ export interface AnalyticsData {
 
 export interface SystemHealth {
   queueSize: number;
-  workersActive: number;
+  activeJobs: number;
+  workerConcurrency: number;
+  enabledIndexingStrategies: string[];
   dbConnected: boolean;
   redisConnected: boolean;
   apiStatus: 'healthy' | 'degraded' | 'down';

@@ -6,7 +6,7 @@ export default function DashboardPage() {
     <>
       <TopBar
         title="Dashboard"
-        subtitle="Welcome back, Alex · May 8, 2024"
+        subtitle="Campaign performance and URL processing overview"
       />
       <DashboardOverview />
     </>

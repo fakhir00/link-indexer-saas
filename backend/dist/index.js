@@ -41,22 +41,23 @@ const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const crypto_1 = __importDefault(require("crypto"));
-const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
+const prisma_1 = require("./prisma");
 const queue_1 = require("./queue");
 const auth_1 = require("./auth");
+const indexing_strategies_1 = require("./indexing-strategies");
 dotenv_1.default.config();
 if (process.env.ENABLE_INLINE_WORKER === 'true') {
     void Promise.resolve().then(() => __importStar(require('./worker')));
 }
 const app = (0, express_1.default)();
 const port = Number(process.env.PORT ?? 4000);
-const prisma = new client_1.PrismaClient();
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+const ALLOW_PUBLIC_SIGNUPS = process.env.ALLOW_PUBLIC_SIGNUPS === 'true';
 const corsOptions = {
     origin(origin, callback) {
         if (!origin || ALLOWED_ORIGINS.includes('*') || ALLOWED_ORIGINS.includes(origin)) {
@@ -110,6 +111,17 @@ const changePasswordSchema = zod_1.z.object({
     currentPassword: zod_1.z.string().min(1),
     newPassword: zod_1.z.string().min(8).max(128),
 });
+const adminCreateUserSchema = zod_1.z.object({
+    email: zod_1.z.string().trim().email(),
+    password: zod_1.z.string().min(8, 'Password must be at least 8 characters').max(128),
+    name: zod_1.z.string().trim().min(2).max(80),
+    role: zod_1.z.enum(['user', 'admin']).optional().default('user'),
+    credits: zod_1.z.number().int().min(0).max(10_000_000).optional().default(500),
+    isActive: zod_1.z.boolean().optional().default(true),
+});
+const adminCreditsSchema = zod_1.z.object({
+    credits: zod_1.z.number().int().min(0).max(10_000_000),
+});
 class HttpError extends Error {
     status;
     details;
@@ -134,6 +146,52 @@ function generateApiKey() {
 }
 function maskFromId(id) {
     return `if_live_sk_••••••••${id.slice(-6)}`;
+}
+function getApiKeyFromRequest(req) {
+    const headerKey = req.header('x-api-key')?.trim();
+    if (headerKey)
+        return headerKey;
+    const authHeader = req.headers.authorization?.trim();
+    if (!authHeader)
+        return null;
+    if (authHeader.startsWith('ApiKey ')) {
+        return authHeader.slice('ApiKey '.length).trim();
+    }
+    if (authHeader.startsWith('Bearer if_live_sk_') || authHeader.startsWith('Bearer if_test_sk_')) {
+        return authHeader.slice('Bearer '.length).trim();
+    }
+    return null;
+}
+async function requireUserAccess(req, res, next) {
+    const apiKey = getApiKeyFromRequest(req);
+    if (!apiKey) {
+        return (0, auth_1.requireAuth)(req, res, next);
+    }
+    const keyRecord = await prisma_1.prisma.apiKey.findFirst({
+        where: {
+            keyHash: hashApiKey(apiKey),
+            isActive: true,
+        },
+        include: {
+            user: true,
+        },
+    });
+    if (!keyRecord || !keyRecord.user.isActive) {
+        return res.status(401).json({ error: 'Unauthorized: API key is invalid or revoked' });
+    }
+    await prisma_1.prisma.apiKey.update({
+        where: { id: keyRecord.id },
+        data: {
+            lastUsedAt: new Date(),
+            requestCount: { increment: 1 },
+        },
+    });
+    req.user = {
+        id: keyRecord.user.id,
+        email: keyRecord.user.email,
+        role: keyRecord.user.role,
+    };
+    return next();
 }
 function firstName(name) {
     return name.trim().split(' ')[0] || name;
@@ -190,7 +248,7 @@ app.get('/health', async (_req, res) => {
         total: 0,
     };
     try {
-        await prisma.$queryRaw `SELECT 1`;
+        await prisma_1.prisma.$queryRaw `SELECT 1`;
         dbConnected = true;
     }
     catch {
@@ -222,13 +280,16 @@ app.get('/health', async (_req, res) => {
     });
 });
 app.post('/auth/register', async (req, res) => {
+    if (!ALLOW_PUBLIC_SIGNUPS) {
+        throw new HttpError(403, 'Public signup is disabled. Ask an administrator to create your account.');
+    }
     const { email, password, name } = parseOrThrow(registerSchema, req.body);
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma_1.prisma.user.findUnique({ where: { email } });
     if (existing) {
         throw new HttpError(409, 'Email already exists');
     }
     const passwordHash = await bcrypt_1.default.hash(password, BCRYPT_ROUNDS);
-    const user = await prisma.user.create({
+    const user = await prisma_1.prisma.user.create({
         data: {
             email,
             name,
@@ -251,7 +312,7 @@ app.post('/auth/register', async (req, res) => {
 });
 app.post('/auth/login', async (req, res) => {
     const { email, password } = parseOrThrow(loginSchema, req.body);
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma_1.prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) {
         throw new HttpError(401, 'Invalid credentials');
     }
@@ -272,12 +333,12 @@ app.post('/auth/login', async (req, res) => {
     });
 });
 app.get('/auth/me', auth_1.requireAuth, async (req, res) => {
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const user = await prisma_1.prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) {
         throw new HttpError(404, 'User not found');
     }
     const month = getMonthBounds();
-    const urlsThisMonth = await prisma.url.count({
+    const urlsThisMonth = await prisma_1.prisma.url.count({
         where: {
             campaign: { userId: user.id },
             createdAt: { gte: month.start, lt: month.end },
@@ -300,7 +361,7 @@ app.patch('/auth/me', auth_1.requireAuth, async (req, res) => {
         throw new HttpError(400, 'No changes provided');
     }
     if (payload.email) {
-        const existing = await prisma.user.findFirst({
+        const existing = await prisma_1.prisma.user.findFirst({
             where: {
                 email: payload.email,
                 id: { not: req.user.id },
@@ -310,7 +371,7 @@ app.patch('/auth/me', auth_1.requireAuth, async (req, res) => {
             throw new HttpError(409, 'Email already in use');
         }
     }
-    const user = await prisma.user.update({
+    const user = await prisma_1.prisma.user.update({
         where: { id: req.user.id },
         data: payload,
     });
@@ -327,7 +388,7 @@ app.post('/auth/change-password', auth_1.requireAuth, async (req, res) => {
     if (currentPassword === newPassword) {
         throw new HttpError(400, 'New password must be different from current password');
     }
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const user = await prisma_1.prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) {
         throw new HttpError(404, 'User not found');
     }
@@ -336,24 +397,24 @@ app.post('/auth/change-password', auth_1.requireAuth, async (req, res) => {
         throw new HttpError(401, 'Current password is incorrect');
     }
     const newHash = await bcrypt_1.default.hash(newPassword, BCRYPT_ROUNDS);
-    await prisma.user.update({
+    await prisma_1.prisma.user.update({
         where: { id: user.id },
         data: { passwordHash: newHash },
     });
     res.json({ success: true });
 });
-app.get('/analytics', auth_1.requireAuth, async (req, res) => {
+app.get('/analytics', requireUserAccess, async (req, res) => {
     const userId = req.user.id;
     const now = new Date();
     const start = new Date(now);
     start.setDate(start.getDate() - 13);
     start.setHours(0, 0, 0, 0);
     const [totalCampaigns, totalUrls, successUrls, failedUrls, recentCampaigns, recentUrls] = await Promise.all([
-        prisma.campaign.count({ where: { userId } }),
-        prisma.url.count({ where: { campaign: { userId } } }),
-        prisma.url.count({ where: { campaign: { userId }, status: 'completed' } }),
-        prisma.url.count({ where: { campaign: { userId }, status: 'failed' } }),
-        prisma.campaign.findMany({
+        prisma_1.prisma.campaign.count({ where: { userId } }),
+        prisma_1.prisma.url.count({ where: { campaign: { userId } } }),
+        prisma_1.prisma.url.count({ where: { campaign: { userId }, status: 'completed' } }),
+        prisma_1.prisma.url.count({ where: { campaign: { userId }, status: 'failed' } }),
+        prisma_1.prisma.campaign.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' },
             take: 5,
@@ -361,7 +422,7 @@ app.get('/analytics', auth_1.requireAuth, async (req, res) => {
                 _count: { select: { urls: true } },
             },
         }),
-        prisma.url.findMany({
+        prisma_1.prisma.url.findMany({
             where: {
                 campaign: { userId },
                 createdAt: { gte: start },
@@ -417,8 +478,8 @@ app.get('/analytics', auth_1.requireAuth, async (req, res) => {
         })),
     });
 });
-app.get('/campaigns', auth_1.requireAuth, async (req, res) => {
-    const campaigns = await prisma.campaign.findMany({
+app.get('/campaigns', requireUserAccess, async (req, res) => {
+    const campaigns = await prisma_1.prisma.campaign.findMany({
         where: { userId: req.user.id },
         include: {
             _count: { select: { urls: true } },
@@ -427,7 +488,7 @@ app.get('/campaigns', auth_1.requireAuth, async (req, res) => {
     });
     const campaignIds = campaigns.map((campaign) => campaign.id);
     const completedGroups = campaignIds.length
-        ? await prisma.url.groupBy({
+        ? await prisma_1.prisma.url.groupBy({
             by: ['campaignId'],
             where: {
                 campaignId: { in: campaignIds },
@@ -456,13 +517,13 @@ app.get('/campaigns', auth_1.requireAuth, async (req, res) => {
     });
     res.json(result);
 });
-app.post('/campaigns', auth_1.requireAuth, async (req, res) => {
+app.post('/campaigns', requireUserAccess, async (req, res) => {
     const input = parseOrThrow(createCampaignSchema, req.body);
     const urls = uniqueNormalizedUrls(input.urls);
     if (urls.length === 0) {
         throw new HttpError(400, 'No valid URLs provided');
     }
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma_1.prisma.$transaction(async (tx) => {
         const user = await tx.user.findUnique({ where: { id: req.user.id } });
         if (!user) {
             throw new HttpError(404, 'User not found');
@@ -519,10 +580,10 @@ app.post('/campaigns', auth_1.requireAuth, async (req, res) => {
         deductedCredits: result.deductedCredits,
     });
 });
-app.patch('/campaigns/:id/status', auth_1.requireAuth, async (req, res) => {
+app.patch('/campaigns/:id/status', requireUserAccess, async (req, res) => {
     const { status } = parseOrThrow(statusUpdateSchema, req.body);
     const campaignId = String(req.params.id);
-    const updated = await prisma.campaign.updateMany({
+    const updated = await prisma_1.prisma.campaign.updateMany({
         where: {
             id: campaignId,
             userId: req.user.id,
@@ -534,9 +595,9 @@ app.patch('/campaigns/:id/status', auth_1.requireAuth, async (req, res) => {
     }
     res.json({ success: true });
 });
-app.delete('/campaigns/:id', auth_1.requireAuth, async (req, res) => {
+app.delete('/campaigns/:id', requireUserAccess, async (req, res) => {
     const campaignId = String(req.params.id);
-    const deleted = await prisma.campaign.deleteMany({
+    const deleted = await prisma_1.prisma.campaign.deleteMany({
         where: {
             id: campaignId,
             userId: req.user.id,
@@ -547,7 +608,7 @@ app.delete('/campaigns/:id', auth_1.requireAuth, async (req, res) => {
     }
     res.json({ success: true });
 });
-app.get('/urls', auth_1.requireAuth, async (req, res) => {
+app.get('/urls', requireUserAccess, async (req, res) => {
     const { status, limit, offset, search, campaignId } = parseOrThrow(urlsQuerySchema, req.query);
     const whereClause = {
         campaign: {
@@ -565,20 +626,20 @@ app.get('/urls', auth_1.requireAuth, async (req, res) => {
         ...(campaignId ? { campaignId } : {}),
     };
     const [urls, total] = await Promise.all([
-        prisma.url.findMany({
+        prisma_1.prisma.url.findMany({
             where: whereClause,
             take: limit,
             skip: offset,
             orderBy: { createdAt: 'desc' },
             include: { campaign: { select: { id: true, name: true, status: true } } },
         }),
-        prisma.url.count({ where: whereClause }),
+        prisma_1.prisma.url.count({ where: whereClause }),
     ]);
     res.json({ urls, total, limit, offset });
 });
-app.post('/urls/:id/retry', auth_1.requireAuth, async (req, res) => {
+app.post('/urls/:id/retry', requireUserAccess, async (req, res) => {
     const urlId = String(req.params.id);
-    const url = await prisma.url.findFirst({
+    const url = await prisma_1.prisma.url.findFirst({
         where: {
             id: urlId,
             campaign: { userId: req.user.id },
@@ -590,7 +651,7 @@ app.post('/urls/:id/retry', auth_1.requireAuth, async (req, res) => {
     if (url.status !== 'failed') {
         throw new HttpError(400, 'Only failed URLs can be retried');
     }
-    await prisma.url.update({
+    await prisma_1.prisma.url.update({
         where: { id: url.id },
         data: {
             status: 'queued',
@@ -598,15 +659,15 @@ app.post('/urls/:id/retry', auth_1.requireAuth, async (req, res) => {
             errorMessage: null,
         },
     });
-    await prisma.campaign.update({
+    await prisma_1.prisma.campaign.update({
         where: { id: url.campaignId },
         data: { status: 'processing' },
     });
     await queue_1.indexQueue.add('index-url', { urlId: url.id, url: url.link }, { jobId: url.id, attempts: 3, backoff: { type: 'exponential', delay: 2000 } });
     res.json({ success: true });
 });
-app.post('/urls/retry-failed', auth_1.requireAuth, async (req, res) => {
-    const failedUrls = await prisma.url.findMany({
+app.post('/urls/retry-failed', requireUserAccess, async (req, res) => {
+    const failedUrls = await prisma_1.prisma.url.findMany({
         where: {
             campaign: { userId: req.user.id },
             status: 'failed',
@@ -620,8 +681,8 @@ app.post('/urls/retry-failed', auth_1.requireAuth, async (req, res) => {
     if (failedUrls.length === 0) {
         return res.json({ success: true, retried: 0 });
     }
-    await prisma.$transaction([
-        prisma.url.updateMany({
+    await prisma_1.prisma.$transaction([
+        prisma_1.prisma.url.updateMany({
             where: {
                 id: { in: failedUrls.map((url) => url.id) },
             },
@@ -631,7 +692,7 @@ app.post('/urls/retry-failed', auth_1.requireAuth, async (req, res) => {
                 errorMessage: null,
             },
         }),
-        prisma.campaign.updateMany({
+        prisma_1.prisma.campaign.updateMany({
             where: { id: { in: Array.from(new Set(failedUrls.map((url) => url.campaignId))) } },
             data: { status: 'processing' },
         }),
@@ -644,7 +705,7 @@ app.post('/urls/retry-failed', auth_1.requireAuth, async (req, res) => {
     res.json({ success: true, retried: failedUrls.length });
 });
 app.get('/api-keys', auth_1.requireAuth, async (req, res) => {
-    const keys = await prisma.apiKey.findMany({
+    const keys = await prisma_1.prisma.apiKey.findMany({
         where: { userId: req.user.id },
         orderBy: { createdAt: 'desc' },
     });
@@ -662,11 +723,11 @@ app.post('/api-keys', auth_1.requireAuth, async (req, res) => {
     const { label } = parseOrThrow(createApiKeySchema, req.body);
     const rawKey = generateApiKey();
     const keyHash = hashApiKey(rawKey);
-    const existing = await prisma.apiKey.findUnique({ where: { keyHash } });
+    const existing = await prisma_1.prisma.apiKey.findUnique({ where: { keyHash } });
     if (existing) {
         throw new HttpError(500, 'Please retry key generation');
     }
-    const key = await prisma.apiKey.create({
+    const key = await prisma_1.prisma.apiKey.create({
         data: {
             userId: req.user.id,
             label,
@@ -684,7 +745,7 @@ app.post('/api-keys', auth_1.requireAuth, async (req, res) => {
 });
 app.delete('/api-keys/:id', auth_1.requireAuth, async (req, res) => {
     const keyId = String(req.params.id);
-    const updated = await prisma.apiKey.updateMany({
+    const updated = await prisma_1.prisma.apiKey.updateMany({
         where: {
             id: keyId,
             userId: req.user.id,
@@ -701,12 +762,12 @@ app.get('/billing/plans', auth_1.requireAuth, (_req, res) => {
     res.json(planCatalog);
 });
 app.get('/billing/overview', auth_1.requireAuth, async (req, res) => {
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const user = await prisma_1.prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) {
         throw new HttpError(404, 'User not found');
     }
     const month = getMonthBounds();
-    const usedThisMonth = await prisma.url.count({
+    const usedThisMonth = await prisma_1.prisma.url.count({
         where: {
             campaign: { userId: user.id },
             createdAt: { gte: month.start, lt: month.end },
@@ -723,16 +784,39 @@ app.get('/billing/overview', auth_1.requireAuth, async (req, res) => {
             cycleStart: month.start.toISOString(),
             cycleEnd: month.end.toISOString(),
         },
-        payments: [],
     });
 });
-app.post('/billing/checkout', auth_1.requireAuth, async (_req, res) => {
-    res.status(501).json({
-        error: 'Stripe checkout is not configured yet. Set STRIPE_SECRET_KEY and implement product prices to enable checkout.',
+app.post('/admin/users', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+    const input = parseOrThrow(adminCreateUserSchema, req.body);
+    const existing = await prisma_1.prisma.user.findUnique({ where: { email: input.email } });
+    if (existing) {
+        throw new HttpError(409, 'Email already exists');
+    }
+    const passwordHash = await bcrypt_1.default.hash(input.password, BCRYPT_ROUNDS);
+    const user = await prisma_1.prisma.user.create({
+        data: {
+            email: input.email,
+            name: input.name,
+            passwordHash,
+            role: input.role,
+            credits: input.credits,
+            isActive: input.isActive,
+        },
+    });
+    res.status(201).json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        credits: user.credits,
+        campaigns: 0,
+        totalUrls: 0,
+        createdAt: user.createdAt,
     });
 });
 app.get('/admin/users', auth_1.requireAuth, auth_1.requireAdmin, async (_req, res) => {
-    const users = await prisma.user.findMany({
+    const users = await prisma_1.prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
         take: 200,
         include: {
@@ -741,7 +825,7 @@ app.get('/admin/users', auth_1.requireAuth, auth_1.requireAdmin, async (_req, re
     });
     const userIds = users.map((user) => user.id);
     const urlCounts = userIds.length
-        ? await prisma.url.groupBy({
+        ? await prisma_1.prisma.url.groupBy({
             by: ['campaignId'],
             where: {
                 campaign: {
@@ -751,7 +835,7 @@ app.get('/admin/users', auth_1.requireAuth, auth_1.requireAdmin, async (_req, re
             _count: { _all: true },
         })
         : [];
-    const campaignCounts = await prisma.campaign.findMany({
+    const campaignCounts = await prisma_1.prisma.campaign.findMany({
         where: { userId: { in: userIds } },
         select: { id: true, userId: true },
     });
@@ -775,13 +859,25 @@ app.get('/admin/users', auth_1.requireAuth, auth_1.requireAdmin, async (_req, re
         createdAt: user.createdAt,
     })));
 });
+app.patch('/admin/users/:id/credits', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+    const { credits } = parseOrThrow(adminCreditsSchema, req.body);
+    const targetUserId = String(req.params.id);
+    const user = await prisma_1.prisma.user.update({
+        where: { id: targetUserId },
+        data: { credits },
+    });
+    res.json({
+        id: user.id,
+        credits: user.credits,
+    });
+});
 app.patch('/admin/users/:id/active', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     const payload = zod_1.z.object({ isActive: zod_1.z.boolean() }).safeParse(req.body);
     if (!payload.success) {
         throw new HttpError(400, 'Validation failed', payload.error.flatten());
     }
     const targetUserId = String(req.params.id);
-    const user = await prisma.user.update({
+    const user = await prisma_1.prisma.user.update({
         where: { id: targetUserId },
         data: { isActive: payload.data.isActive },
     });
@@ -793,7 +889,7 @@ app.patch('/admin/users/:id/active', auth_1.requireAuth, auth_1.requireAdmin, as
 app.get('/admin/system', auth_1.requireAuth, auth_1.requireAdmin, async (_req, res) => {
     const [queue, dbStatus, redisStatus] = await Promise.all([
         (0, queue_1.getQueueSnapshot)(),
-        prisma
+        prisma_1.prisma
             .$queryRaw `SELECT 1`
             .then(() => true)
             .catch(() => false),
@@ -806,7 +902,9 @@ app.get('/admin/system', auth_1.requireAuth, auth_1.requireAdmin, async (_req, r
     const apiStatus = dbStatus && redisStatus ? 'healthy' : 'degraded';
     res.json({
         queue,
-        workersActive: queue.active,
+        activeJobs: queue.active,
+        workerConcurrency: Number(process.env.WORKER_CONCURRENCY ?? 5),
+        enabledIndexingStrategies: (0, indexing_strategies_1.getEnabledIndexingStrategies)(),
         dbConnected: dbStatus,
         redisConnected: redisStatus,
         averageProcessingTime,
@@ -830,12 +928,12 @@ app.listen(port, () => {
     console.log(`IndexFlow backend running on http://localhost:${port}`);
 });
 process.on('SIGINT', async () => {
-    await prisma.$disconnect();
+    await prisma_1.prisma.$disconnect();
     await queue_1.connection.quit();
     process.exit(0);
 });
 process.on('SIGTERM', async () => {
-    await prisma.$disconnect();
+    await prisma_1.prisma.$disconnect();
     await queue_1.connection.quit();
     process.exit(0);
 });

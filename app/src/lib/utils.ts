@@ -86,13 +86,6 @@ export function truncateUrl(url: string, maxLength = 60): string {
   return url.substring(0, maxLength) + '…';
 }
 
-export function generateMockApiKey(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const segment = (len: number) =>
-    Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  return `if_live_sk_${segment(32)}`;
-}
-
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

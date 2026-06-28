@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, UrlItem } from '@/lib/api';
 import { formatDate, formatRelative } from '@/lib/utils';
-import { Search, Filter, RefreshCw, ExternalLink, Clock, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Search, RefreshCw, ExternalLink, Clock, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 
 type FilterStatus = 'all' | 'queued' | 'processing' | 'completed' | 'failed';
 
@@ -128,9 +128,6 @@ export default function UrlsPage() {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-        <button className="btn btn-secondary" style={{ gap: 6 }}>
-          <Filter size={14} /> Filter
-        </button>
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>

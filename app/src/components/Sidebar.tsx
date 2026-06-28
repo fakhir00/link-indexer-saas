@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, Zap, BarChart3, Settings, Key, CreditCard, Users, ShieldCheck, Menu, X, ChevronRight, Activity, Globe } from 'lucide-react';
+import { LayoutDashboard, Zap, BarChart3, Settings, Key, WalletCards, Users, Menu, X, ChevronRight, Activity, Globe } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
 interface NavGroup {
@@ -21,6 +21,7 @@ interface SidebarContentProps {
   pathname: string;
   userName: string;
   userCredits: number;
+  userRole: string;
   closeMobile: () => void;
 }
 
@@ -37,7 +38,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Account',
     items: [
-      { href: '/dashboard/billing', icon: <CreditCard size={17} />, label: 'Billing & Credits' },
+      { href: '/dashboard/billing', icon: <WalletCards size={17} />, label: 'Credits' },
       { href: '/dashboard/api-keys', icon: <Key size={17} />, label: 'API Keys' },
       { href: '/dashboard/settings', icon: <Settings size={17} />, label: 'Settings' },
     ],
@@ -47,7 +48,6 @@ const navGroups: NavGroup[] = [
     items: [
       { href: '/dashboard/admin/users', icon: <Users size={17} />, label: 'Users' },
       { href: '/dashboard/admin/system', icon: <Activity size={17} />, label: 'System Health' },
-      { href: '/dashboard/admin/security', icon: <ShieldCheck size={17} />, label: 'Security' },
     ],
   },
 ];
@@ -56,7 +56,14 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
 }
 
-function SidebarContent({ pathname, userName, userCredits, closeMobile }: SidebarContentProps) {
+function SidebarContent({ pathname, userName, userCredits, userRole, closeMobile }: SidebarContentProps) {
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.label === 'Admin' && userRole !== 'admin' ? [] : group.items,
+    }))
+    .filter((group) => group.items.length > 0);
+
   return (
     <>
       <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -86,7 +93,7 @@ function SidebarContent({ pathname, userName, userCredits, closeMobile }: Sideba
       </div>
 
       <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.label} style={{ marginBottom: 20 }}>
             <div
               style={{
@@ -134,7 +141,7 @@ function SidebarContent({ pathname, userName, userCredits, closeMobile }: Sideba
         <div style={{ marginTop: 10 }}>
           <Link href="/dashboard/billing" style={{ textDecoration: 'none' }}>
             <button className="btn btn-primary" style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}>
-              Buy More Credits
+              View Credits
             </button>
           </Link>
         </div>
@@ -168,7 +175,7 @@ function SidebarContent({ pathname, userName, userCredits, closeMobile }: Sideba
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>User</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{userRole === 'admin' ? 'Admin' : 'User'}</div>
         </div>
         <Link href="/dashboard/settings" style={{ color: 'var(--text-muted)' }}>
           <Settings size={15} />
@@ -186,6 +193,7 @@ export default function Sidebar() {
   const closeMobile = () => setMobileOpen(false);
   const userName = user?.name ?? 'Loading...';
   const userCredits = user?.credits ?? 0;
+  const userRole = user?.role ?? 'user';
 
   return (
     <>
@@ -211,7 +219,7 @@ export default function Sidebar() {
       </button>
 
       <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
-        <SidebarContent pathname={pathname} userName={userName} userCredits={userCredits} closeMobile={closeMobile} />
+        <SidebarContent pathname={pathname} userName={userName} userCredits={userCredits} userRole={userRole} closeMobile={closeMobile} />
       </aside>
 
       {mobileOpen && (
@@ -236,7 +244,7 @@ export default function Sidebar() {
         }}
         id="mobile-sidebar"
       >
-        <SidebarContent pathname={pathname} userName={userName} userCredits={userCredits} closeMobile={closeMobile} />
+        <SidebarContent pathname={pathname} userName={userName} userCredits={userCredits} userRole={userRole} closeMobile={closeMobile} />
       </aside>
 
       <style>{`

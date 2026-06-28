@@ -120,23 +120,11 @@ export interface BillingOverview {
     cycleStart: string;
     cycleEnd: string;
   };
-  payments: Array<{
-    id: string;
-    amount: number;
-    status: string;
-    createdAt: string;
-  }>;
 }
 
 export const api = {
   login: async (email: string, password: string) => {
     const data = await request<LoginResponse>('/auth/login', 'POST', { email, password });
-    if (typeof window !== 'undefined') localStorage.setItem('indexflow_token', data.token);
-    return data;
-  },
-
-  register: async (name: string, email: string, password: string) => {
-    const data = await request<LoginResponse>('/auth/register', 'POST', { name, email, password });
     if (typeof window !== 'undefined') localStorage.setItem('indexflow_token', data.token);
     return data;
   },
@@ -221,8 +209,24 @@ export const api = {
       }>
     >('/admin/users'),
 
+  createAdminUser: (payload: { name: string; email: string; password: string; role: 'user' | 'admin'; credits: number }) =>
+    request<{
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      isActive: boolean;
+      credits: number;
+      campaigns: number;
+      totalUrls: number;
+      createdAt: string;
+    }>('/admin/users', 'POST', payload),
+
   setAdminUserActive: (id: string, isActive: boolean) =>
     request<{ id: string; isActive: boolean }>(`/admin/users/${id}/active`, 'PATCH', { isActive }),
+
+  setAdminUserCredits: (id: string, credits: number) =>
+    request<{ id: string; credits: number }>(`/admin/users/${id}/credits`, 'PATCH', { credits }),
 
   getAdminSystem: () =>
     request<{
@@ -235,7 +239,9 @@ export const api = {
         paused: number;
         total: number;
       };
-      workersActive: number;
+      activeJobs: number;
+      workerConcurrency: number;
+      enabledIndexingStrategies: string[];
       dbConnected: boolean;
       redisConnected: boolean;
       averageProcessingTime: number;
