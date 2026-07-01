@@ -54,22 +54,23 @@ Admins can create users and assign credits from `/dashboard/admin/users`.
 
 ## Indexing Providers
 
-Local development uses deterministic dry-run processing by default:
+Local development can use deterministic dry-run processing if you explicitly enable it:
 
 ```env
 INDEXING_DRY_RUN=true
 ```
 
-For production, configure one or more live providers:
+For live processing, leave dry-run disabled and configure one or more providers:
 
 ```env
+INDEXING_DRY_RUN=false
 PING_ENDPOINTS="https://provider.example/ping?url={url}"
 INDEXNOW_KEY="..."
 INDEXNOW_HOST="example.com"
 INDEXNOW_KEY_LOCATION="https://example.com/<key>.txt"
 ```
 
-Set `INDEXING_DRY_RUN=false` to require a configured live provider.
+With `INDEXING_DRY_RUN=false`, campaign creation and retries require a configured live provider. For IndexNow, the submitted URL host must match `INDEXNOW_HOST`, and the key must be hosted at `https://<host>/<key>.txt` unless `INDEXNOW_KEY_LOCATION` points somewhere else.
 
 ## API Keys
 

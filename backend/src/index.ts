@@ -2,11 +2,12 @@ import express, { NextFunction, Request, Response } from 'express';
 import cors, { CorsOptions } from 'cors';
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { prisma } from './prisma';
 import { indexQueue, getQueueSnapshot, connection } from './queue';
-import { getEnabledIndexingStrategies } from './indexing-strategies';
+import { getEnabledIndexingStrategies, hasEnabledIndexingStrategies, isUsingDryRunStrategy } from './indexing-strategies';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 if (process.env.ENABLE_INLINE_WORKER === 'true') {
   void import('./worker');
@@ -51,6 +52,10 @@ const statusUpdateSchema = z.object({
   status: z.enum(['paused', 'processing']),
 });
 
+const createApiKeySchema = z.object({
+  label: z.string().trim().min(1).max(80),
+});
+
 const urlsQuerySchema = z.object({
   status: z.enum(['all', 'queued', 'processing', 'completed', 'failed']).optional().default('all'),
   limit: z.coerce.number().int().min(1).max(200).optional().default(50),
@@ -81,6 +86,45 @@ function parseOrThrow<T>(schema: z.ZodType<T>, input: unknown): T {
 function uniqueNormalizedUrls(urls: string[]) {
   const clean = urls.map((url) => url.trim());
   return Array.from(new Set(clean));
+}
+
+function hashApiKey(apiKey: string) {
+  return crypto.createHash('sha256').update(apiKey).digest('hex');
+}
+
+function generateApiKey() {
+  return `if_live_sk_${crypto.randomBytes(24).toString('hex')}`;
+}
+
+function toApiKeyItem(apiKey: {
+  id: string;
+  keyHash: string;
+  label: string | null;
+  lastUsedAt: Date | null;
+  requestCount: number;
+  isActive: boolean;
+  createdAt: Date;
+}) {
+  return {
+    id: apiKey.id,
+    label: apiKey.label ?? 'Untitled key',
+    keyPreview: `if_live_sk_...${apiKey.keyHash.slice(-8)}`,
+    lastUsedAt: apiKey.lastUsedAt,
+    requestCount: apiKey.requestCount,
+    isActive: apiKey.isActive,
+    createdAt: apiKey.createdAt,
+  };
+}
+
+function requireIndexingProvider() {
+  if (hasEnabledIndexingStrategies()) {
+    return;
+  }
+
+  throw new HttpError(
+    503,
+    'No live indexing provider configured. Add INDEXNOW_KEY and INDEXNOW_HOST, or configure PING_ENDPOINTS. Set INDEXING_DRY_RUN=true only for local testing.',
+  );
 }
 
 app.get('/health', async (_req, res) => {
@@ -243,6 +287,8 @@ app.get('/campaigns', async (_req, res) => {
 });
 
 app.post('/campaigns', async (req, res) => {
+  requireIndexingProvider();
+
   const input = parseOrThrow(createCampaignSchema, req.body);
   const urls = uniqueNormalizedUrls(input.urls);
 
@@ -357,6 +403,8 @@ app.get('/urls', async (req, res) => {
 });
 
 app.post('/urls/:id/retry', async (req, res) => {
+  requireIndexingProvider();
+
   const urlId = String(req.params.id);
   const url = await prisma.url.findFirst({
     where: {
@@ -392,6 +440,8 @@ app.post('/urls/:id/retry', async (req, res) => {
 });
 
 app.post('/urls/retry-failed', async (_req, res) => {
+  requireIndexingProvider();
+
   const failedUrls = await prisma.url.findMany({
     where: {
       status: 'failed',
@@ -435,6 +485,131 @@ app.post('/urls/retry-failed', async (_req, res) => {
   res.json({ success: true, retried: failedUrls.length });
 });
 
+app.get('/api-keys', async (_req, res) => {
+  const apiKeys = await prisma.apiKey.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json(apiKeys.map(toApiKeyItem));
+});
+
+app.post('/api-keys', async (req, res) => {
+  const { label } = parseOrThrow(createApiKeySchema, req.body);
+  const rawKey = generateApiKey();
+
+  const apiKey = await prisma.apiKey.create({
+    data: {
+      label,
+      keyHash: hashApiKey(rawKey),
+    },
+  });
+
+  res.status(201).json({
+    ...toApiKeyItem(apiKey),
+    key: rawKey,
+  });
+});
+
+app.delete('/api-keys/:id', async (req, res) => {
+  const updated = await prisma.apiKey.updateMany({
+    where: { id: String(req.params.id) },
+    data: { isActive: false },
+  });
+
+  if (updated.count === 0) {
+    throw new HttpError(404, 'API key not found');
+  }
+
+  res.json({ success: true });
+});
+
+const billingPlans = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: 29,
+    monthlyCredits: 500,
+    features: ['500 URL credits/mo', '3 active campaigns', 'Ping endpoint strategy', 'CSV import', 'Basic analytics', 'Admin support'],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 79,
+    monthlyCredits: 2000,
+    features: ['2,000 URL credits/mo', 'Unlimited campaigns', 'Ping + IndexNow strategies', 'CSV import + API access', 'Advanced analytics', 'API key authentication'],
+  },
+  {
+    id: 'agency',
+    name: 'Agency',
+    price: 199,
+    monthlyCredits: 10000,
+    features: ['10,000 URL credits/mo', 'Unlimited campaigns', 'Ping + IndexNow strategies', 'Bulk campaign operations', 'Admin-managed users', 'Priority operations support'],
+  },
+] as const;
+
+app.get('/billing/plans', (_req, res) => {
+  res.json(billingPlans);
+});
+
+app.get('/billing/overview', async (_req, res) => {
+  const currentPlan = billingPlans[0];
+  const now = new Date();
+  const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const usedThisMonth = await prisma.url.count({
+    where: { createdAt: { gte: cycleStart, lt: cycleEnd } },
+  });
+
+  res.json({
+    currentPlan,
+    credits: {
+      currentBalance: Math.max(currentPlan.monthlyCredits - usedThisMonth, 0),
+      usedThisMonth,
+      monthlyAllowance: currentPlan.monthlyCredits,
+      cycleEnd,
+    },
+  });
+});
+
+app.get('/sitemap.xml', async (_req, res) => {
+  const urls = await prisma.url.findMany({
+    where: { status: 'completed' },
+    orderBy: { createdAt: 'desc' },
+    take: 10000,
+    select: { link: true, discoveredAt: true },
+  });
+
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+  for (const url of urls) {
+    xml += '  <url>\n';
+    xml += `    <loc>${url.link.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')}</loc>\n`;
+    if (url.discoveredAt) {
+      xml += `    <lastmod>${url.discoveredAt.toISOString()}</lastmod>\n`;
+    }
+    xml += '    <changefreq>daily</changefreq>\n';
+    xml += '    <priority>0.8</priority>\n';
+    xml += '  </url>\n';
+  }
+
+  xml += '</urlset>';
+
+  res.header('Content-Type', 'application/xml');
+  res.send(xml);
+});
+
+app.get('/:indexNowKey.txt', (req, res, next) => {
+  const indexNowKey = process.env.INDEXNOW_KEY?.trim();
+
+  if (!indexNowKey || req.params.indexNowKey !== indexNowKey) {
+    next();
+    return;
+  }
+
+  res.type('text/plain').send(indexNowKey);
+});
+
 app.get('/system', async (_req, res) => {
   const [queue, dbStatus, redisStatus] = await Promise.all([
     getQueueSnapshot(),
@@ -456,6 +631,8 @@ app.get('/system', async (_req, res) => {
     activeJobs: queue.active,
     workerConcurrency: Number(process.env.WORKER_CONCURRENCY ?? 5),
     enabledIndexingStrategies: getEnabledIndexingStrategies(),
+    indexingReady: hasEnabledIndexingStrategies(),
+    dryRunEnabled: isUsingDryRunStrategy(),
     dbConnected: dbStatus,
     redisConnected: redisStatus,
     averageProcessingTime,

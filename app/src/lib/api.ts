@@ -73,6 +73,55 @@ export interface AnalyticsResponse {
   recentCampaigns: Array<{ id: string; name: string; status: string; createdAt: string; totalUrls: number }>;
 }
 
+export interface ApiKeyItem {
+  id: string;
+  label: string;
+  keyPreview: string;
+  lastUsedAt?: string | null;
+  requestCount: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface BillingPlan {
+  id: 'starter' | 'pro' | 'agency';
+  name: string;
+  price: number;
+  monthlyCredits: number;
+  features: string[];
+}
+
+export interface BillingOverview {
+  currentPlan: BillingPlan;
+  credits: {
+    currentBalance: number;
+    usedThisMonth: number;
+    monthlyAllowance: number;
+    cycleEnd: string;
+  };
+}
+
+export interface SystemHealth {
+  queue: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    delayed: number;
+    paused: number;
+    total: number;
+  };
+  activeJobs: number;
+  workerConcurrency: number;
+  enabledIndexingStrategies: string[];
+  indexingReady: boolean;
+  dryRunEnabled: boolean;
+  dbConnected: boolean;
+  redisConnected: boolean;
+  averageProcessingTime: number;
+  apiStatus: 'healthy' | 'degraded';
+}
+
 export const api = {
   getAnalytics: () => request<AnalyticsResponse>('/analytics'),
 
@@ -112,23 +161,17 @@ export const api = {
 
   retryAllFailedUrls: () => request<{ success: boolean; retried: number }>('/urls/retry-failed', 'POST'),
 
-  getSystem: () =>
-    request<{
-      queue: {
-        waiting: number;
-        active: number;
-        completed: number;
-        failed: number;
-        delayed: number;
-        paused: number;
-        total: number;
-      };
-      activeJobs: number;
-      workerConcurrency: number;
-      enabledIndexingStrategies: string[];
-      dbConnected: boolean;
-      redisConnected: boolean;
-      averageProcessingTime: number;
-      apiStatus: 'healthy' | 'degraded';
-    }>('/system'),
+  getSystem: () => request<SystemHealth>('/system'),
+
+  getAdminSystem: () => request<SystemHealth>('/system'),
+
+  getApiKeys: () => request<ApiKeyItem[]>('/api-keys'),
+
+  createApiKey: (label: string) => request<ApiKeyItem & { key: string }>('/api-keys', 'POST', { label }),
+
+  revokeApiKey: (id: string) => request<{ success: boolean }>(`/api-keys/${id}`, 'DELETE'),
+
+  getBillingPlans: () => request<BillingPlan[]>('/billing/plans'),
+
+  getBillingOverview: () => request<BillingOverview>('/billing/overview'),
 };

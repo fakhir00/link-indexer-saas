@@ -1,6 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
+
+dotenv.config({ override: true });
 
 const redisUrl = process.env.REDIS_URL;
 if (!redisUrl) throw new Error('Missing REDIS_URL');
