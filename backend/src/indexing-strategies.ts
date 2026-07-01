@@ -1,3 +1,5 @@
+import { google } from 'googleapis';
+
 export interface IndexingStrategyResult {
   strategy: string;
   detail: string;
@@ -134,10 +136,59 @@ class DryRunStrategy implements IndexingStrategy {
   }
 }
 
+class GoogleIndexingStrategy implements IndexingStrategy {
+  name = 'Google Indexing API';
+
+  constructor(
+    private readonly serviceAccountJsonBase64: string,
+    private readonly timeoutMs: number,
+  ) {}
+
+  async submit(url: string) {
+    try {
+      const decodedJson = Buffer.from(this.serviceAccountJsonBase64, 'base64').toString('utf-8');
+      const credentials = JSON.parse(decodedJson);
+
+      const jwtClient = new google.auth.JWT({
+        email: credentials.client_email,
+        key: credentials.private_key,
+        scopes: ['https://www.googleapis.com/auth/indexing']
+      });
+
+      const indexing = google.indexing({
+        version: 'v3',
+        auth: jwtClient,
+      });
+
+      const res = await indexing.urlNotifications.publish(
+        {
+          requestBody: {
+            url: url,
+            type: 'URL_UPDATED',
+          },
+        },
+        { timeout: this.timeoutMs }
+      );
+
+      return {
+        strategy: this.name,
+        detail: `Submitted to Google Indexing API (${res.status})`,
+      };
+    } catch (error: any) {
+      throw new Error(`Google Indexing API failed: ${error.message || error.toString()}`);
+    }
+  }
+}
+
 function buildStrategies() {
   const timeoutMs = Number(process.env.INDEXING_REQUEST_TIMEOUT_MS ?? 8000);
   const strategies: IndexingStrategy[] = [];
   const pingEndpoints = csv(process.env.PING_ENDPOINTS);
+
+  const googleServiceAccountBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64?.trim();
+  if (googleServiceAccountBase64) {
+    strategies.push(new GoogleIndexingStrategy(googleServiceAccountBase64, timeoutMs));
+  }
 
   if (pingEndpoints.length > 0) {
     strategies.push(new PingStrategy(pingEndpoints, timeoutMs));
