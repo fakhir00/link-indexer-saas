@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { api, AnalyticsResponse } from '@/lib/api';
-import { useAuth } from '@/lib/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
 
 export default function DashboardOverview() {
-  const { user } = useAuth();
   const [data, setData] = useState<AnalyticsResponse | null>(null);
 
   useEffect(() => {
@@ -27,7 +25,7 @@ export default function DashboardOverview() {
     };
   }, []);
 
-  if (!data || !user) {
+  if (!data) {
     return <div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading dashboard...</div>;
   }
 
@@ -52,7 +50,7 @@ export default function DashboardOverview() {
             gap: 10,
           }}
         >
-          Welcome back, {user.firstName ?? user.name.split(' ')[0]} <span style={{ animation: 'pulse 2s infinite' }}>👋</span>
+          Welcome to IndexFlow <span style={{ animation: 'pulse 2s infinite' }}>👋</span>
         </h2>
         <p style={{ color: 'var(--text-secondary)' }}>Here is what&apos;s happening with your indexing campaigns.</p>
       </div>

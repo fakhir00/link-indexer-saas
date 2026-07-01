@@ -6,24 +6,9 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  name         String
-  passwordHash String
-  role         String     @default("user") // "user" or "admin"
-  isActive     Boolean    @default(true)
-  credits      Int        @default(500) // Starting credits
-  campaigns    Campaign[]
-  apiKeys      ApiKey[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-}
-
 model Campaign {
   id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   name        String
   status      String   @default("pending") // pending, processing, paused, completed
   dripPerDay  Int      @default(30)
@@ -31,7 +16,6 @@ model Campaign {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([userId])
   @@index([status])
 }
 
@@ -55,8 +39,6 @@ model Url {
 
 model ApiKey {
   id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   keyHash      String    @unique
   label        String?
   lastUsedAt   DateTime?
@@ -64,5 +46,4 @@ model ApiKey {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
 
-  @@index([userId])
 }

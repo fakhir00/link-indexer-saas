@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, Zap, BarChart3, Settings, Key, WalletCards, Users, Menu, X, ChevronRight, Activity, Globe } from 'lucide-react';
-import { useAuth } from '@/lib/AuthContext';
+import { LayoutDashboard, Zap, BarChart3, Settings, Activity, Globe, Menu, X, ChevronRight } from 'lucide-react';
 
 interface NavGroup {
   label: string;
@@ -19,9 +18,6 @@ interface NavItem {
 
 interface SidebarContentProps {
   pathname: string;
-  userName: string;
-  userCredits: number;
-  userRole: string;
   closeMobile: () => void;
 }
 
@@ -36,18 +32,10 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Account',
+    label: 'System',
     items: [
-      { href: '/dashboard/billing', icon: <WalletCards size={17} />, label: 'Credits' },
-      { href: '/dashboard/api-keys', icon: <Key size={17} />, label: 'API Keys' },
+      { href: '/dashboard/system', icon: <Activity size={17} />, label: 'System Health' },
       { href: '/dashboard/settings', icon: <Settings size={17} />, label: 'Settings' },
-    ],
-  },
-  {
-    label: 'Admin',
-    items: [
-      { href: '/dashboard/admin/users', icon: <Users size={17} />, label: 'Users' },
-      { href: '/dashboard/admin/system', icon: <Activity size={17} />, label: 'System Health' },
     ],
   },
 ];
@@ -56,14 +44,7 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
 }
 
-function SidebarContent({ pathname, userName, userCredits, userRole, closeMobile }: SidebarContentProps) {
-  const visibleGroups = navGroups
-    .map((group) => ({
-      ...group,
-      items: group.label === 'Admin' && userRole !== 'admin' ? [] : group.items,
-    }))
-    .filter((group) => group.items.length > 0);
-
+function SidebarContent({ pathname, closeMobile }: SidebarContentProps) {
   return (
     <>
       <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -93,7 +74,7 @@ function SidebarContent({ pathname, userName, userCredits, userRole, closeMobile
       </div>
 
       <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
-        {visibleGroups.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.label} style={{ marginBottom: 20 }}>
             <div
               style={{
@@ -121,66 +102,6 @@ function SidebarContent({ pathname, userName, userCredits, userRole, closeMobile
           </div>
         ))}
       </nav>
-
-      <div
-        style={{
-          padding: '14px 14px',
-          borderTop: '1px solid var(--border-subtle)',
-          margin: '0 8px 8px',
-          background: 'var(--bg-surface-2)',
-          borderRadius: 'var(--radius-md)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Credits</span>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{userCredits.toLocaleString()} credits</span>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${Math.min((userCredits / 6000) * 100, 100)}%` }} />
-        </div>
-        <div style={{ marginTop: 10 }}>
-          <Link href="/dashboard/billing" style={{ textDecoration: 'none' }}>
-            <button className="btn btn-primary" style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}>
-              View Credits
-            </button>
-          </Link>
-        </div>
-      </div>
-
-      <div
-        style={{
-          padding: '12px 16px',
-          borderTop: '1px solid var(--border-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            background: 'var(--gradient-brand)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 13,
-            fontWeight: 700,
-            color: '#fff',
-            flexShrink: 0,
-          }}
-        >
-          {userName[0]?.toUpperCase() ?? 'A'}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{userRole === 'admin' ? 'Admin' : 'User'}</div>
-        </div>
-        <Link href="/dashboard/settings" style={{ color: 'var(--text-muted)' }}>
-          <Settings size={15} />
-        </Link>
-      </div>
     </>
   );
 }
@@ -188,12 +109,8 @@ function SidebarContent({ pathname, userName, userCredits, userRole, closeMobile
 export default function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user } = useAuth();
 
   const closeMobile = () => setMobileOpen(false);
-  const userName = user?.name ?? 'Loading...';
-  const userCredits = user?.credits ?? 0;
-  const userRole = user?.role ?? 'user';
 
   return (
     <>
@@ -219,7 +136,7 @@ export default function Sidebar() {
       </button>
 
       <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
-        <SidebarContent pathname={pathname} userName={userName} userCredits={userCredits} userRole={userRole} closeMobile={closeMobile} />
+        <SidebarContent pathname={pathname} closeMobile={closeMobile} />
       </aside>
 
       {mobileOpen && (
@@ -244,7 +161,7 @@ export default function Sidebar() {
         }}
         id="mobile-sidebar"
       >
-        <SidebarContent pathname={pathname} userName={userName} userCredits={userCredits} userRole={userRole} closeMobile={closeMobile} />
+        <SidebarContent pathname={pathname} closeMobile={closeMobile} />
       </aside>
 
       <style>{`

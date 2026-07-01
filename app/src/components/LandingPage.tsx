@@ -43,10 +43,7 @@ export default function LandingPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <Link href="/login">
-              <button className="btn btn-ghost" style={{ fontSize: 14 }}>Sign In</button>
-            </Link>
-            <Link href="/login">
+            <Link href="/dashboard">
               <button className="btn btn-primary" style={{ fontSize: 14 }}>
                 Open Dashboard <ArrowRight size={14} />
               </button>
@@ -96,9 +93,9 @@ export default function LandingPage() {
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/login">
+          <Link href="/dashboard">
             <button className="btn btn-primary" style={{ padding: '13px 28px', fontSize: 15, gap: 8 }}>
-              Sign In
+              Open Dashboard
               <ArrowRight size={16} />
             </button>
           </Link>
@@ -325,9 +322,9 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              <Link href="/login">
+              <Link href="/dashboard">
                 <button className={`btn ${plan.isPopular ? 'btn-primary' : 'btn-secondary'}`} style={{ width: '100%' }}>
-                  Sign In
+                  Open Dashboard
                 </button>
               </Link>
             </div>
@@ -349,9 +346,9 @@ export default function LandingPage() {
           <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 32 }}>
             Ask your administrator for an account, then submit campaigns and monitor every URL from one dashboard.
           </p>
-          <Link href="/login">
+          <Link href="/dashboard">
             <button className="btn btn-primary" style={{ padding: '14px 36px', fontSize: 16 }}>
-              Sign In to Dashboard
+              Open Dashboard
             </button>
           </Link>
         </div>

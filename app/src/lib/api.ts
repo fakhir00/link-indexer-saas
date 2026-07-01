@@ -12,18 +12,12 @@ async function parseErrorMessage(response: Response) {
   }
 }
 
-function getAuthHeaders() {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('indexflow_token') : null;
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 async function request<T>(path: string, method: HttpMethod = 'GET', body?: unknown): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     method,
-    headers: getAuthHeaders(),
+    headers: {
+      'Content-Type': 'application/json',
+    },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 
@@ -36,22 +30,6 @@ async function request<T>(path: string, method: HttpMethod = 'GET', body?: unkno
   }
 
   return response.json() as Promise<T>;
-}
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  firstName?: string;
-  role: string;
-  credits: number;
-  plan?: string;
-  urlsThisMonth?: number;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: AuthUser;
 }
 
 export interface Campaign {
@@ -95,51 +73,7 @@ export interface AnalyticsResponse {
   recentCampaigns: Array<{ id: string; name: string; status: string; createdAt: string; totalUrls: number }>;
 }
 
-export interface ApiKeyItem {
-  id: string;
-  label: string;
-  keyPreview: string;
-  requestCount: number;
-  isActive: boolean;
-  createdAt: string;
-  lastUsedAt?: string;
-}
-
-export interface BillingOverview {
-  currentPlan: {
-    id: 'starter' | 'pro' | 'agency';
-    name: string;
-    price: number;
-    monthlyCredits: number;
-    features: string[];
-  };
-  credits: {
-    currentBalance: number;
-    usedThisMonth: number;
-    monthlyAllowance: number;
-    cycleStart: string;
-    cycleEnd: string;
-  };
-}
-
 export const api = {
-  login: async (email: string, password: string) => {
-    const data = await request<LoginResponse>('/auth/login', 'POST', { email, password });
-    if (typeof window !== 'undefined') localStorage.setItem('indexflow_token', data.token);
-    return data;
-  },
-
-  logout: () => {
-    if (typeof window !== 'undefined') localStorage.removeItem('indexflow_token');
-  },
-
-  getMe: () => request<AuthUser>('/auth/me'),
-
-  updateMe: (payload: { name?: string; email?: string }) => request<AuthUser>('/auth/me', 'PATCH', payload),
-
-  changePassword: (payload: { currentPassword: string; newPassword: string }) =>
-    request<{ success: boolean }>('/auth/change-password', 'POST', payload),
-
   getAnalytics: () => request<AnalyticsResponse>('/analytics'),
 
   getCampaigns: () => request<Campaign[]>('/campaigns'),
@@ -178,57 +112,7 @@ export const api = {
 
   retryAllFailedUrls: () => request<{ success: boolean; retried: number }>('/urls/retry-failed', 'POST'),
 
-  getApiKeys: () => request<ApiKeyItem[]>('/api-keys'),
-
-  createApiKey: (label: string) =>
-    request<{ id: string; label: string; key: string; keyPreview: string; createdAt: string }>('/api-keys', 'POST', {
-      label,
-    }),
-
-  revokeApiKey: (id: string) => request<{ success: boolean }>(`/api-keys/${id}`, 'DELETE'),
-
-  getBillingOverview: () => request<BillingOverview>('/billing/overview'),
-
-  getBillingPlans: () =>
-    request<
-      Array<{ id: 'starter' | 'pro' | 'agency'; name: string; price: number; monthlyCredits: number; features: string[] }>
-    >('/billing/plans'),
-
-  getAdminUsers: () =>
-    request<
-      Array<{
-        id: string;
-        name: string;
-        email: string;
-        role: string;
-        isActive: boolean;
-        credits: number;
-        campaigns: number;
-        totalUrls: number;
-        createdAt: string;
-      }>
-    >('/admin/users'),
-
-  createAdminUser: (payload: { name: string; email: string; password: string; role: 'user' | 'admin'; credits: number }) =>
-    request<{
-      id: string;
-      name: string;
-      email: string;
-      role: string;
-      isActive: boolean;
-      credits: number;
-      campaigns: number;
-      totalUrls: number;
-      createdAt: string;
-    }>('/admin/users', 'POST', payload),
-
-  setAdminUserActive: (id: string, isActive: boolean) =>
-    request<{ id: string; isActive: boolean }>(`/admin/users/${id}/active`, 'PATCH', { isActive }),
-
-  setAdminUserCredits: (id: string, credits: number) =>
-    request<{ id: string; credits: number }>(`/admin/users/${id}/credits`, 'PATCH', { credits }),
-
-  getAdminSystem: () =>
+  getSystem: () =>
     request<{
       queue: {
         waiting: number;
@@ -246,5 +130,5 @@ export const api = {
       redisConnected: boolean;
       averageProcessingTime: number;
       apiStatus: 'healthy' | 'degraded';
-    }>('/admin/system'),
+    }>('/system'),
 };
