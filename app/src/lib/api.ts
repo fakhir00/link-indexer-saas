@@ -161,6 +161,15 @@ export const api = {
 
   retryAllFailedUrls: () => request<{ success: boolean; retried: number }>('/urls/retry-failed', 'POST'),
 
+  tools: {
+    googleIndex: (serviceAccountJson: string, urls: string[]) =>
+      request<{ success: boolean; results: Array<{ url: string; success: boolean; status?: number; error?: string }> }>(
+        '/tools/google-index',
+        'POST',
+        { serviceAccountJson, urls }
+      ),
+  },
+
   getSystem: () => request<SystemHealth>('/system'),
 
   getAdminSystem: () => request<SystemHealth>('/system'),

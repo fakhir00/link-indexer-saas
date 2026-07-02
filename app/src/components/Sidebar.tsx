@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, Zap, BarChart3, Settings, Activity, Globe, Menu, X, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Zap, BarChart3, Settings, Activity, Globe, Menu, X, ChevronRight, Wrench } from 'lucide-react';
 
 interface NavGroup {
   label: string;
@@ -29,6 +29,12 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/campaigns', icon: <Zap size={17} />, label: 'Campaigns' },
       { href: '/dashboard/urls', icon: <Globe size={17} />, label: 'URLs' },
       { href: '/dashboard/analytics', icon: <BarChart3 size={17} />, label: 'Analytics' },
+    ],
+  },
+  {
+    label: 'Utilities',
+    items: [
+      { href: '/dashboard/tools', icon: <Wrench size={17} />, label: 'Quick Tools' },
     ],
   },
   {
