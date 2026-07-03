@@ -52,17 +52,25 @@ export const campaignService = {
       urls,
     });
 
+    const dripPerDay = campaign.dripPerDay > 0 ? campaign.dripPerDay : 30;
+
     await indexQueue.addBulk(
-      campaign.urls.map((url) => ({
-        name: 'index-url',
-        data: { urlId: url.id, url: url.link },
-        opts: {
-          jobId: url.id,
-          attempts: 3,
-          backoff: { type: 'exponential' as const, delay: 2000 },
-          removeOnComplete: true,
-        },
-      })),
+      campaign.urls.map((url, index) => {
+        const dayOffset = Math.floor(index / dripPerDay);
+        const delayMs = dayOffset * 24 * 60 * 60 * 1000;
+
+        return {
+          name: 'index-url',
+          data: { urlId: url.id, url: url.link },
+          opts: {
+            jobId: url.id,
+            attempts: 3,
+            backoff: { type: 'exponential' as const, delay: 2000 },
+            removeOnComplete: true,
+            delay: delayMs > 0 ? delayMs : undefined,
+          },
+        };
+      }),
     );
 
     return {

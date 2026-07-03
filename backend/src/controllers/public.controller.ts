@@ -17,4 +17,14 @@ export const publicController = {
     }
     res.type('text/plain').send(indexNowKey);
   },
+
+  async campaignSitemap(req: Request, res: Response) {
+    const xml = await sitemapService.generateCampaignSitemapXml(String(req.params.campaignId));
+    if (!xml) {
+      res.status(404).send('Not Found');
+      return;
+    }
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  },
 };

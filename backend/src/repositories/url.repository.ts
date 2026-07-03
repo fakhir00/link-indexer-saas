@@ -115,6 +115,14 @@ export const urlRepository = {
     });
   },
 
+  findByCampaignForSitemap(campaignId: string) {
+    return prisma.url.findMany({
+      where: { campaignId },
+      orderBy: { createdAt: 'desc' },
+      select: { link: true, discoveredAt: true, status: true },
+    });
+  },
+
   findRecentByDateRange(start: Date) {
     return prisma.url.findMany({
       where: { createdAt: { gte: start } },

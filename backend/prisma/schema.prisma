@@ -38,12 +38,14 @@ model Url {
 }
 
 model ApiKey {
-  id           String    @id @default(uuid())
-  keyHash      String    @unique
-  label        String?
-  lastUsedAt   DateTime?
-  requestCount Int       @default(0)
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
+  id             String    @id @default(uuid())
+  keyHash        String    @unique
+  label          String?
+  plan           String    @default("free") // free, starter, pro, agency
+  creditsBalance Int       @default(100) // Default credits for new keys
+  lastUsedAt     DateTime?
+  requestCount   Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
 
 }
