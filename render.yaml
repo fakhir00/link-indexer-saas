@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: indexflow-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: ENABLE_INLINE_WORKER
+        value: "true"
+      # These must be filled in securely in the Render Dashboard
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: INDEXNOW_KEY
+        sync: false
+      - key: INDEXNOW_HOST
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"
