@@ -1,7 +1,8 @@
 services:
   - type: web
-    name: indexflow-backend
+    name: indexflow-backend-api
     env: node
+    plan: free
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm start
