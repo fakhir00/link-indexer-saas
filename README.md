@@ -103,3 +103,6 @@ cd app && npm run lint && npm run build
 - Configure `CORS_ORIGINS` to the production app origin.
 - Use managed PostgreSQL and Redis.
 - Run `npm run prisma:deploy` during backend release.
+
+
+Deploying to Vercel
