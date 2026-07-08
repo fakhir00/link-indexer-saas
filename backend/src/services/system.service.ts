@@ -1,7 +1,7 @@
 import { prisma } from '../prisma';
 import { connection } from '../queue';
 import { getAllQueueSnapshots } from '../queue/queues';
-import { getEnabledIndexingStrategies, hasEnabledIndexingStrategies, isUsingDryRunStrategy } from '../indexing-strategies';
+import { adapterRegistry } from '../adapters/adapter.registry';
 import { env } from '../config/env';
 
 // Legacy single-queue snapshot for /health endpoint
@@ -88,9 +88,9 @@ export const systemService = {
       queues: queueSnapshots,   // New: per-queue breakdown
       activeJobs: totalActive,
       workerConcurrency: env.workerConcurrency,
-      enabledIndexingStrategies: getEnabledIndexingStrategies(),
-      indexingReady: hasEnabledIndexingStrategies(),
-      dryRunEnabled: isUsingDryRunStrategy(),
+      enabledIndexingStrategies: adapterRegistry.getEnabledAdapters(),
+      indexingReady: adapterRegistry.hasEnabledAdapters(),
+      dryRunEnabled: adapterRegistry.isUsingDryRun(),
       dbConnected: dbStatus,
       redisConnected: redisStatus,
       averageProcessingTime: 2.4,

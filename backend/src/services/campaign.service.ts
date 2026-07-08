@@ -1,11 +1,12 @@
-import { campaignRepository } from '../repositories';
-import { HttpError, uniqueNormalizedUrls } from '../utils';
-import { hasEnabledIndexingStrategies } from '../indexing-strategies';
-import { getQueueForPriority } from '../queue/queues';
+import { campaignRepository, urlRepository } from '../repositories';
+import { HttpError } from '../utils';
+import { adapterRegistry } from '../adapters/adapter.registry';
 import { enqueueForValidation } from '../queue/producers/validation.producer';
+import { getQueueForPriority } from '../queue/queues';
+import { uniqueNormalizedUrls } from '../utils';
 
 function requireIndexingProvider() {
-  if (!hasEnabledIndexingStrategies()) {
+  if (!adapterRegistry.hasEnabledAdapters()) {
     throw new HttpError(
       503,
       'No live indexing provider configured. Add INDEXNOW_KEY and INDEXNOW_HOST, or configure PING_ENDPOINTS. Set INDEXING_DRY_RUN=true only for local testing.',

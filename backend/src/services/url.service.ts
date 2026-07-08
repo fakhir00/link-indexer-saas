@@ -1,11 +1,11 @@
 import { urlRepository, campaignRepository } from '../repositories';
 import { HttpError } from '../utils';
-import { hasEnabledIndexingStrategies } from '../indexing-strategies';
+import { adapterRegistry } from '../adapters/adapter.registry';
 import type { UrlsQueryInput } from '../validators';
 import { enqueueForValidation } from '../queue/producers/validation.producer';
 
 function requireIndexingProvider() {
-  if (!hasEnabledIndexingStrategies()) {
+  if (!adapterRegistry.hasEnabledAdapters()) {
     throw new HttpError(
       503,
       'No live indexing provider configured. Add INDEXNOW_KEY and INDEXNOW_HOST, or configure PING_ENDPOINTS. Set INDEXING_DRY_RUN=true only for local testing.',

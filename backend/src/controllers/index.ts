@@ -7,3 +7,5 @@ export { analyticsController } from './analytics.controller';
 export { systemController } from './system.controller';
 export { toolsController } from './tools.controller';
 export { publicController } from './public.controller';
+export { directoryController } from './directory.controller';
+export { rssController } from './rss.controller';

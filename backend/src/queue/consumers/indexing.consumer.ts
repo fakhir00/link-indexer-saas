@@ -1,7 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { connection } from '../../queue';
 import { prisma } from '../../prisma';
-import { submitUrlToIndexingProviders } from '../../indexing-strategies';
+import { adapterRegistry } from '../../adapters/adapter.registry';
 import { makeRetryDecision, classifyError } from '../retry-engine';
 import { requeueForRetry, sendToDlq, IndexingJobData } from '../producers/indexing.producer';
 import {
@@ -85,9 +85,9 @@ async function processIndexingJob(job: Job): Promise<void> {
   });
 
   try {
-    const results = await submitUrlToIndexingProviders(link);
+    const results = await adapterRegistry.submitUrl(link, { campaignId: urlRecord.campaign.id });
     const durationMs = Date.now() - startedAt;
-    const strategiesUsed = results.map((r) => r.strategy).join(', ');
+    const strategiesUsed = results.map((r) => r.adapter).join(', ');
 
     // Log each submission
     await prisma.$transaction(
@@ -95,7 +95,7 @@ async function processIndexingJob(job: Job): Promise<void> {
         prisma.submissionLog.create({
           data: {
             urlId,
-            adapter: r.strategy,
+            adapter: r.adapter,
             status: 'success',
             durationMs,
             attemptNo: attemptNumber + 1,

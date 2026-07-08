@@ -10,6 +10,9 @@ import systemRoutes from './system.routes';
 import toolsRoutes from './tools.routes';
 import publicRoutes from './public.routes';
 
+import directoryRoutes from './directory.routes';
+import rssRoutes from './rss.routes';
+
 const router = Router();
 
 // Health check (top-level)
@@ -24,7 +27,9 @@ router.use('/analytics', analyticsRoutes);
 router.use('/system', systemRoutes);
 router.use('/tools', toolsRoutes);
 
-// Public routes (sitemap, indexnow key)
+// Public routes (directory, rss, sitemap, indexnow key)
+router.use('/directory', directoryRoutes);
+router.use('/rss', rssRoutes);
 router.use('/', publicRoutes);
 
 export default router;

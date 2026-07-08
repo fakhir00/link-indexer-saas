@@ -6,3 +6,5 @@ export { analyticsService } from './analytics.service';
 export { systemService } from './system.service';
 export { toolsService } from './tools.service';
 export { sitemapService } from './sitemap.service';
+export { directoryService } from './directory.service';
+export { rssService } from './rss.service';
