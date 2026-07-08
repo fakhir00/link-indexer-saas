@@ -9,8 +9,7 @@ import type { ValidationJobData } from '../producers/validation.producer';
 
 const CONCURRENCY = Number(process.env.VALIDATION_CONCURRENCY ?? 10);
 
-async function processValidationJob(job: Job): Promise<void> {
-  const data = job.data as ValidationJobData;
+export async function processValidationPayload(data: ValidationJobData): Promise<void> {
   const { urlId, link, campaignId, userPriority, enqueueForIndexingAfter } = data;
 
   // Mark as validating
@@ -155,6 +154,10 @@ async function processValidationJob(job: Job): Promise<void> {
       await enqueueUrl({ urlId, campaignId, link, strategy: 'auto', priority: userPriority, attemptNumber: 0 });
     }
   }
+}
+
+async function processValidationJob(job: Job): Promise<void> {
+  await processValidationPayload(job.data as ValidationJobData);
 }
 
 export function startValidationWorker() {

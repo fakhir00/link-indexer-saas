@@ -7,11 +7,11 @@
     "backend"
   ],
   "scripts": {
-    "dev": "npm run dev --prefix app",
-    "build": "npm run build --prefix app",
-    "start": "npm run start --prefix app",
-    "backend:dev": "npm run dev --prefix backend",
-    "backend:start": "npm run start --prefix backend"
+    "dev": "npm run dev --workspace app",
+    "build": "npm run build --workspace app",
+    "start": "npm run start --workspace app",
+    "backend:dev": "npm run dev --workspace backend",
+    "backend:start": "npm run start --workspace backend"
   },
   "dependencies": {
     "next": "16.2.6"

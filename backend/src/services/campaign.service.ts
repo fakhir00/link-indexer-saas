@@ -1,18 +1,8 @@
-import { campaignRepository, urlRepository } from '../repositories';
+import { campaignRepository } from '../repositories';
 import { HttpError } from '../utils';
-import { adapterRegistry } from '../adapters/adapter.registry';
 import { enqueueForValidation } from '../queue/producers/validation.producer';
-import { getQueueForPriority } from '../queue/queues';
 import { uniqueNormalizedUrls } from '../utils';
 
-function requireIndexingProvider() {
-  if (!adapterRegistry.hasEnabledAdapters()) {
-    throw new HttpError(
-      503,
-      'No live indexing provider configured. Add INDEXNOW_KEY and INDEXNOW_HOST, or configure PING_ENDPOINTS. Set INDEXING_DRY_RUN=true only for local testing.',
-    );
-  }
-}
 
 export const campaignService = {
   async list() {
@@ -43,8 +33,6 @@ export const campaignService = {
   },
 
   async create(input: { name: string; urls: string[]; dripPerDay?: number; priority?: number; tags?: string[] }) {
-    requireIndexingProvider();
-
     const urls = uniqueNormalizedUrls(input.urls);
     if (urls.length === 0) {
       throw new HttpError(400, 'No valid URLs provided');
@@ -68,24 +56,15 @@ export const campaignService = {
         const dayOffset = Math.floor(index / dripPerDay);
         const delayMs = dayOffset * 24 * 60 * 60 * 1000;
 
-        // Note: validation queue doesn't support delay natively,
-        // so first batch validates immediately, later batches go straight to indexing with delay
-        if (delayMs === 0) {
-          return enqueueForValidation({
+        return enqueueForValidation(
+          {
             urlId: url.id,
             link: url.link,
             campaignId: campaign.id,
             userPriority: priority,
             enqueueForIndexingAfter: true,
-          });
-        }
-
-        // Delayed URLs skip validation and go straight to indexing queue
-        const queue = getQueueForPriority(priority);
-        return queue.add(
-          'index-url',
-          { urlId: url.id, campaignId: campaign.id, link: url.link, strategy: 'auto', priority, attemptNumber: 0 },
-          { priority, jobId: `url:${url.id}:attempt:0`, delay: delayMs },
+          },
+          delayMs > 0 ? { delayMs } : undefined,
         );
       }),
     );

@@ -5,6 +5,7 @@ export class DryRunAdapter implements IndexingAdapter {
   readonly type: AdapterType = 'api';
 
   isConfigured(): boolean {
+    // Active by default (fallback) unless explicitly disabled with INDEXING_DRY_RUN=false
     return process.env.INDEXING_DRY_RUN !== 'false';
   }
 
