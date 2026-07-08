@@ -32,6 +32,8 @@ CREATE TABLE "ApiKey" (
     "id" TEXT NOT NULL,
     "keyHash" TEXT NOT NULL,
     "label" TEXT,
+    "plan" TEXT NOT NULL DEFAULT 'free',
+    "creditsBalance" INTEGER NOT NULL DEFAULT 100,
     "lastUsedAt" TIMESTAMP(3),
     "requestCount" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,

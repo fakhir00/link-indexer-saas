@@ -6,46 +6,468 @@ datasource db {
   provider = "postgresql"
 }
 
-model Campaign {
-  id          String   @id @default(uuid())
+// ─────────────────────────────────────────────
+// MULTI-TENANT CORE
+// ─────────────────────────────────────────────
 
+model Organization {
+  id          String   @id @default(uuid())
   name        String
-  status      String   @default("pending") // pending, processing, paused, completed
-  dripPerDay  Int      @default(30)
-  urls        Url[]
+  slug        String   @unique
+  plan        String   @default("free")   // free, starter, pro, agency
+  logoUrl     String?
+  websiteUrl  String?
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  users         User[]
+  clients       Client[]
+  campaigns     Campaign[]
+  apiKeys       ApiKey[]
+  creditLedger  CreditLedger[]
+  invoices      Invoice[]
+  promoCodes    PromoCode[]
+  notifications Notification[]
+  webhooks      Webhook[]
+  auditLogs     AuditLog[]
+
+  @@index([slug])
+}
+
+model User {
+  id             String   @id @default(uuid())
+  orgId          String
+  organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email          String   @unique
+  name           String?
+  passwordHash   String?
+  role           String   @default("member")  // owner, admin, member, viewer
+  isActive       Boolean  @default(true)
+  lastLoginAt    DateTime?
+  emailVerified  Boolean  @default(false)
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  campaigns     Campaign[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+
+  @@index([orgId])
+  @@index([email])
+}
+
+model Client {
+  id       String       @id @default(uuid())
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name     String
+  website  String?
+  notes    String?
+  isActive Boolean      @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  campaigns Campaign[]
+
+  @@index([orgId])
+}
+
+// ─────────────────────────────────────────────
+// CAMPAIGNS & URLS (EXTENDED)
+// ─────────────────────────────────────────────
+
+model Campaign {
+  id           String       @id @default(uuid())
+  orgId        String?
+  org          Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  clientId     String?
+  client       Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdById  String?
+  createdBy    User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  name         String
+  status       String  @default("pending")  // pending, processing, paused, completed
+  dripPerDay   Int     @default(30)
+  priority     Int     @default(5)           // 1 (critical) – 10 (low)
+  tags         String[] @default([])
+  notes        String?
+
+  // Analytics roll-ups (denormalised for speed)
+  totalUrls     Int @default(0)
+  submittedUrls Int @default(0)
+  completedUrls Int @default(0)
+  failedUrls    Int @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  urls       Url[]
+  auditLogs  AuditLog[]
+
+  @@index([orgId])
   @@index([status])
+  @@index([clientId])
 }
 
 model Url {
-  id             String    @id @default(uuid())
-  campaignId     String
-  campaign       Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  link           String
-  status         String    @default("queued") // queued, processing, submitted, failed, completed
-  retryCount     Int       @default(0)
-  maxRetries     Int       @default(3)
-  strategy       String?
-  errorMessage   String?
-  lastAttemptAt  DateTime?
-  discoveredAt   DateTime?
-  createdAt      DateTime  @default(now())
+  id            String    @id @default(uuid())
+  campaignId    String
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-  @@index([campaignId])
+  link          String
+  status        String    @default("queued")  // queued, validating, processing, submitted, failed, completed, skipped
+  priority      Int       @default(5)         // 1-10 priority score
+
+  // Retry tracking
+  retryCount    Int       @default(0)
+  maxRetries    Int       @default(3)
+  nextRetryAt   DateTime?
+  errorClass    String?   // rate_limit, server_error, not_found, dns_error, network, ssl
+
+  // Outcome
+  strategy      String?
+  errorMessage  String?
+  lastAttemptAt DateTime?
+  discoveredAt  DateTime?
+
+  // Health scoring (0-100 each)
+  healthScore       Int?
+  technicalScore    Int?
+  contentScore      Int?
+  indexabilityScore Int?
+  discoveryScore    Int?
+
+  // Validation status
+  validationStatus  String?  // pending, passed, failed, warned
+  httpStatus        Int?
+  isHttps           Boolean?
+  responseTimeMs    Int?
+  robotsBlocked     Boolean?
+  hasNoindex        Boolean?
+  canonicalMismatch Boolean?
+  redirectChain     String[] @default([])
+  contentType       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  validation     UrlValidation?
+  timeline       UrlTimeline[]
+  submissionLogs SubmissionLog[]
+
+  @@index([campaignId, status])
   @@index([status])
+  @@index([link])
+  @@index([nextRetryAt])
 }
 
+model UrlValidation {
+  id              String   @id @default(uuid())
+  urlId           String   @unique
+  url             Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
+
+  // DNS
+  dnsResolved     Boolean  @default(false)
+  dnsError        String?
+  ipAddress       String?
+
+  // HTTP
+  httpStatus      Int?
+  finalUrl        String?     // After redirects
+  redirectChain   String[]    @default([])
+  redirectCount   Int         @default(0)
+  responseTimeMs  Int?
+  contentType     String?
+  contentLength   Int?
+
+  // HTTPS
+  isHttps         Boolean     @default(false)
+  sslValid        Boolean?
+  sslExpiry       DateTime?
+
+  // Crawlability
+  robotsTxtBlocked Boolean    @default(false)
+  robotsRule        String?
+  metaRobotsNoindex Boolean   @default(false)
+  canonicalUrl      String?
+  canonicalMismatch Boolean   @default(false)
+
+  // Scores
+  technicalScore    Int?
+  contentScore      Int?
+  indexabilityScore Int?
+
+  checkedAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([urlId])
+}
+
+model UrlTimeline {
+  id        String   @id @default(uuid())
+  urlId     String
+  url       Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  event     String   // added, validated, queued, processing, submitted, completed, failed, retried, skipped
+  detail    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([urlId, createdAt])
+}
+
+model SubmissionLog {
+  id           String   @id @default(uuid())
+  urlId        String
+  url          Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  adapter      String   // indexnow, ping, google, dry-run
+  status       String   // success, failed, skipped
+  httpStatus   Int?
+  responseBody String?
+  errorMessage String?
+  durationMs   Int?
+  attemptNo    Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  @@index([urlId, createdAt])
+  @@index([adapter, status])
+}
+
+// ─────────────────────────────────────────────
+// RETRY POLICY
+// ─────────────────────────────────────────────
+
+model RetryPolicy {
+  id            String   @id @default(uuid())
+  errorClass    String   @unique  // rate_limit, server_error, not_found, dns_error, network, ssl
+  shouldRetry   Boolean  @default(true)
+  maxAttempts   Int      @default(3)
+  delaysMinutes Int[]    @default([1, 5, 30])  // delay before each retry
+  sendToDlq     Boolean  @default(false)       // after maxAttempts exhausted
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// API KEYS (EXTENDED)
+// ─────────────────────────────────────────────
+
 model ApiKey {
-  id             String    @id @default(uuid())
+  id             String       @id @default(uuid())
+  orgId          String?
+  org            Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
   keyHash        String    @unique
   label          String?
-  plan           String    @default("free") // free, starter, pro, agency
-  creditsBalance Int       @default(100) // Default credits for new keys
+  plan           String    @default("free")   // free, starter, pro, agency
+  scopes         String[]  @default([])        // campaigns:read, campaigns:write, etc.
+  creditsBalance Int       @default(100)
+  rateLimit      Int       @default(100)       // requests per minute
   lastUsedAt     DateTime?
   requestCount   Int       @default(0)
   isActive       Boolean   @default(true)
+  expiresAt      DateTime?
   createdAt      DateTime  @default(now())
 
+  @@index([orgId])
+  @@index([keyHash])
+}
+
+// ─────────────────────────────────────────────
+// BILLING
+// ─────────────────────────────────────────────
+
+model CreditLedger {
+  id          String       @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  type        String       // credit, debit, refund, adjustment, promo
+  amount      Int          // positive = credit, negative = debit
+  balanceAfter Int
+  description String?
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+
+  @@index([orgId, createdAt])
+}
+
+model Invoice {
+  id          String       @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  amount      Int          // in cents
+  currency    String       @default("usd")
+  status      String       @default("draft")  // draft, sent, paid, void
+  dueDate     DateTime?
+  paidAt      DateTime?
+  lineItems   Json?        // array of {description, quantity, unitPrice}
+  stripeId    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orgId])
+  @@index([status])
+}
+
+model PromoCode {
+  id          String       @id @default(uuid())
+  orgId       String?
+  org         Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  code        String       @unique
+  type        String       // percent, flat, credits
+  value       Int          // percent off, flat USD cents, or credit units
+  maxUses     Int?
+  usedCount   Int          @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  @@index([code])
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model NotificationRule {
+  id        String   @id @default(uuid())
+  orgId     String?
+  userId    String?
+  event     String   // campaign_complete, url_failed, credits_low, worker_error
+  channel   String   // email, discord, slack, telegram, webhook
+  config    Json     // {discordWebhook: "...", email: "..."}
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([event])
+}
+
+model Notification {
+  id        String       @id @default(uuid())
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      String        // info, success, warning, error
+  title     String
+  body      String?
+  channel   String        // in_app, email, discord, slack
+  readAt    DateTime?
+  sentAt    DateTime?
+  metadata  Json?
+  createdAt DateTime      @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([userId, readAt])
+}
+
+// ─────────────────────────────────────────────
+// WEBHOOKS
+// ─────────────────────────────────────────────
+
+model Webhook {
+  id        String       @id @default(uuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  url       String
+  events    String[]     @default([])  // campaign.completed, url.failed, etc.
+  secret    String?      // for HMAC signature
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([orgId])
+}
+
+model WebhookDelivery {
+  id           String   @id @default(uuid())
+  webhookId    String
+  webhook      Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event        String
+  payload      Json
+  httpStatus   Int?
+  responseBody String?
+  durationMs   Int?
+  success      Boolean  @default(false)
+  attemptNo    Int      @default(1)
+  nextRetryAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([webhookId, createdAt])
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id         String       @id @default(uuid())
+  orgId      String?
+  org        Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  userId     String?
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  campaignId String?
+  campaign   Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  action     String        // created, updated, deleted, paused, resumed, retried
+  entity     String        // campaign, url, api_key, organization, user
+  entityId   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime      @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([entity, entityId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// OBSERVABILITY
+// ─────────────────────────────────────────────
+
+model WorkerStatus {
+  id           String   @id @default(uuid())
+  workerId     String   @unique
+  status       String   @default("idle")   // idle, processing, error, stopped
+  currentJobId String?
+  queueName    String?
+  processedCount Int    @default(0)
+  errorCount   Int      @default(0)
+  lastHeartbeatAt DateTime @default(now())
+  startedAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([workerId])
+}
+
+model IndexEvent {
+  id         String   @id @default(uuid())
+  date       DateTime // truncated to day for aggregation
+  adapter    String
+  status     String   // success, failed
+  count      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([date, adapter, status])
+  @@index([date])
+}
+
+model HealthReport {
+  id              String   @id @default(uuid())
+  dbConnected     Boolean
+  redisConnected  Boolean
+  queueDepth      Int
+  activeWorkers   Int
+  errorRate       Float
+  avgResponseMs   Float?
+  capturedAt      DateTime @default(now())
+
+  @@index([capturedAt])
 }
