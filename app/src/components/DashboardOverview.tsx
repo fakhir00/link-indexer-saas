@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react';
 import { api, AnalyticsResponse } from '@/lib/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 export default function DashboardOverview() {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -14,10 +17,17 @@ export default function DashboardOverview() {
     api
       .getAnalytics()
       .then((result) => {
-        if (mounted) setData(result);
+        if (!mounted) return;
+        setData(result);
+        setError(null);
       })
-      .catch(() => {
-        if (mounted) setData(null);
+      .catch((requestError) => {
+        if (!mounted) return;
+        setData(null);
+        setError(requestError instanceof Error ? requestError.message : 'Unable to load dashboard data.');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
       });
 
     return () => {
@@ -25,14 +35,24 @@ export default function DashboardOverview() {
     };
   }, []);
 
-  if (!data) {
+  if (loading) {
     return <div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading dashboard...</div>;
   }
 
+  if (error || !data) {
+    return (
+      <div style={{ padding: 28 }}>
+        <div className="alert alert-error">
+          <span>{error ?? 'Unable to load dashboard data.'}</span>
+        </div>
+      </div>
+    );
+  }
+
   const statCards = [
-    { label: 'Total URLs Submitted', value: data.totalUrls.toLocaleString(), color: '#6366f1' },
-    { label: 'Active Campaigns', value: data.totalCampaigns.toLocaleString(), color: '#10b981' },
-    { label: 'Avg Success Rate', value: `${data.successRate}%`, color: '#8b5cf6' },
+    { label: 'Total URLs Submitted', value: data.totalUrls.toLocaleString(), color: '#5eead4' },
+    { label: 'Active Campaigns', value: data.totalCampaigns.toLocaleString(), color: '#38bdf8' },
+    { label: 'Avg Success Rate', value: `${data.successRate}%`, color: '#22c55e' },
     { label: 'Failed Extractions', value: data.failedUrls.toLocaleString(), color: '#ef4444' },
   ];
 
@@ -49,9 +69,7 @@ export default function DashboardOverview() {
             alignItems: 'center',
             gap: 10,
           }}
-        >
-          Welcome to IndexFlow <span style={{ animation: 'pulse 2s infinite' }}>👋</span>
-        </h2>
+        >IndexFlow Overview</h2>
         <p style={{ color: 'var(--text-secondary)' }}>Here is what&apos;s happening with your indexing campaigns.</p>
       </div>
 
@@ -77,8 +95,8 @@ export default function DashboardOverview() {
               <AreaChart data={data.trends} margin={{ top: 0, right: 4, bottom: 0, left: -20 }}>
                 <defs>
                   <linearGradient id="submitted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#5eead4" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#5eead4" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="crawled" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
@@ -89,7 +107,7 @@ export default function DashboardOverview() {
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
                 <Tooltip />
-                <Area type="monotone" dataKey="submitted" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#submitted)" />
+                <Area type="monotone" dataKey="submitted" stroke="#5eead4" strokeWidth={2} fillOpacity={1} fill="url(#submitted)" />
                 <Area type="monotone" dataKey="crawled" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#crawled)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -102,9 +120,9 @@ export default function DashboardOverview() {
             <Link
               href="/dashboard/campaigns"
               className="btn-ghost"
-              style={{ fontSize: 12, padding: '4px 8px', color: 'var(--text-brand)' }}
+              style={{ fontSize: 12, padding: '4px 8px', color: 'var(--text-brand)', display: 'inline-flex', alignItems: 'center', gap: 5 }}
             >
-              View All &rarr;
+              View All <ArrowRight size={12} />
             </Link>
           </div>
 

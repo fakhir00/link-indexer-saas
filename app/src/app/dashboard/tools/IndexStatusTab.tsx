@@ -188,7 +188,7 @@ export default function IndexStatusTab() {
                     result.evidence?.itemsChecked !== undefined ? `${result.evidence.itemsChecked} SERP items` : null,
                   ]
                     .filter(Boolean)
-                    .join(' · ');
+                    .join(' | ');
 
                   return (
                     <tr key={`${result.url}-${result.checkedAt}`}>

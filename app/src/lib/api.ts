@@ -90,55 +90,6 @@ export interface AnalyticsResponse {
   recentCampaigns: Array<{ id: string; name: string; status: string; createdAt: string; totalUrls: number }>;
 }
 
-export interface ApiKeyItem {
-  id: string;
-  label: string;
-  keyPreview: string;
-  lastUsedAt?: string | null;
-  requestCount: number;
-  isActive: boolean;
-  createdAt: string;
-}
-
-export interface BillingPlan {
-  id: 'starter' | 'pro' | 'agency';
-  name: string;
-  price: number;
-  monthlyCredits: number;
-  features: string[];
-}
-
-export interface BillingOverview {
-  currentPlan: BillingPlan;
-  credits: {
-    currentBalance: number;
-    usedThisMonth: number;
-    monthlyAllowance: number;
-    cycleEnd: string;
-  };
-}
-
-export interface SystemHealth {
-  queue: {
-    waiting: number;
-    active: number;
-    completed: number;
-    failed: number;
-    delayed: number;
-    paused: number;
-    total: number;
-  };
-  activeJobs: number;
-  workerConcurrency: number;
-  enabledIndexingStrategies: string[];
-  indexingReady: boolean;
-  dryRunEnabled: boolean;
-  dbConnected: boolean;
-  redisConnected: boolean;
-  averageProcessingTime: number;
-  apiStatus: 'healthy' | 'degraded';
-}
-
 export type IndexVerificationProvider = 'auto' | 'dataforseo' | 'google-cse' | 'dry-run';
 export type IndexVerificationStatus = 'indexed' | 'not_indexed' | 'unknown' | 'error';
 
@@ -235,17 +186,4 @@ export const api = {
       request<IndexVerificationResponse>('/tools/verify-index', 'POST', { urls, provider }),
   },
 
-  getSystem: () => request<SystemHealth>('/system'),
-
-  getAdminSystem: () => request<SystemHealth>('/system'),
-
-  getApiKeys: () => request<ApiKeyItem[]>('/api-keys'),
-
-  createApiKey: (label: string) => request<ApiKeyItem & { key: string }>('/api-keys', 'POST', { label }),
-
-  revokeApiKey: (id: string) => request<{ success: boolean }>(`/api-keys/${id}`, 'DELETE'),
-
-  getBillingPlans: () => request<BillingPlan[]>('/billing/plans'),
-
-  getBillingOverview: () => request<BillingOverview>('/billing/overview'),
 };

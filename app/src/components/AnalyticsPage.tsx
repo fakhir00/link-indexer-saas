@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, AnalyticsResponse } from '@/lib/api';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AlertTriangle, BarChart3, CheckCircle2, Send } from 'lucide-react';
 
 interface TooltipPayloadItem {
   color: string;
@@ -42,6 +43,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -49,7 +51,14 @@ export default function AnalyticsPage() {
     api
       .getAnalytics()
       .then((result) => {
-        if (mounted) setAnalytics(result);
+        if (!mounted) return;
+        setAnalytics(result);
+        setLoadError(null);
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        setAnalytics(null);
+        setLoadError(error instanceof Error ? error.message : 'Unable to load analytics data.');
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -82,25 +91,49 @@ export default function AnalyticsPage() {
     return <div style={{ padding: 28, color: 'var(--text-muted)' }}>Loading analytics...</div>;
   }
 
-  if (!analytics) {
-    return <div style={{ padding: 28, color: 'var(--text-muted)' }}>Unable to load analytics data.</div>;
+  if (loadError || !analytics) {
+    return (
+      <div style={{ padding: 28 }}>
+        <div className="alert alert-error">
+          <span>{loadError ?? 'Unable to load analytics data.'}</span>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="page-enter" style={{ padding: 28 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
         {[
-          { label: 'Total Submitted', value: summary.totalSubmitted.toLocaleString(), color: '#6366f1', icon: '📤' },
-          { label: 'Crawl Discovered', value: summary.totalCrawled.toLocaleString(), color: '#10b981', icon: '🔍' },
-          { label: 'Failed / Errored', value: summary.totalFailed.toLocaleString(), color: '#ef4444', icon: '⚠️' },
-          { label: 'Overall Success', value: `${summary.successRate}%`, color: '#06b6d4', icon: '📈' },
-        ].map((card) => (
+          { label: 'Total Submitted', value: summary.totalSubmitted.toLocaleString(), color: '#5eead4', icon: Send },
+          { label: 'Crawl Discovered', value: summary.totalCrawled.toLocaleString(), color: '#22c55e', icon: CheckCircle2 },
+          { label: 'Failed / Errored', value: summary.totalFailed.toLocaleString(), color: '#ef4444', icon: AlertTriangle },
+          { label: 'Overall Success', value: `${summary.successRate}%`, color: '#38bdf8', icon: BarChart3 },
+        ].map((card) => {
+          const Icon = card.icon;
+
+          return (
           <div key={card.label} className="stat-card" style={{ padding: '20px 22px' }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>{card.icon}</div>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 'var(--radius-md)',
+                background: `${card.color}14`,
+                color: card.color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 12,
+              }}
+            >
+              <Icon size={19} />
+            </div>
             <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: card.color, marginBottom: 4 }}>{card.value}</div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{card.label}</div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="card" style={{ padding: 28, marginBottom: 20 }}>
@@ -113,8 +146,8 @@ export default function AnalyticsPage() {
             <AreaChart data={analytics.trends} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
               <defs>
                 <linearGradient id="sub" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#5eead4" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#5eead4" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="crl" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
@@ -129,7 +162,7 @@ export default function AnalyticsPage() {
               <XAxis dataKey="date" tick={{ fill: '#484f58', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#484f58', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="submitted" stroke="#6366f1" fill="url(#sub)" strokeWidth={2} name="Submitted" />
+              <Area type="monotone" dataKey="submitted" stroke="#5eead4" fill="url(#sub)" strokeWidth={2} name="Submitted" />
               <Area type="monotone" dataKey="crawled" stroke="#10b981" fill="url(#crl)" strokeWidth={2} name="Crawled" />
               <Area type="monotone" dataKey="failed" stroke="#ef4444" fill="url(#fld)" strokeWidth={2} name="Failed" />
             </AreaChart>
@@ -148,7 +181,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="date" tick={{ fill: '#484f58', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#484f58', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="submitted" fill="#6366f1" radius={[4, 4, 0, 0]} name="Submitted" opacity={0.8} />
+                <Bar dataKey="submitted" fill="#5eead4" radius={[4, 4, 0, 0]} name="Submitted" opacity={0.8} />
                 <Bar dataKey="crawled" fill="#10b981" radius={[4, 4, 0, 0]} name="Crawled" opacity={0.8} />
               </BarChart>
             </ResponsiveContainer>

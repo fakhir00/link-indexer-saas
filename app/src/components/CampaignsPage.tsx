@@ -19,6 +19,7 @@ export default function CampaignsPage() {
   const [showModal, setShowModal] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -26,9 +27,14 @@ export default function CampaignsPage() {
   const [newCampUrls, setNewCampUrls] = useState('');
 
   const loadCampaigns = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await api.getCampaigns();
       setCampaigns(data);
+    } catch (error) {
+      setCampaigns([]);
+      setLoadError(error instanceof Error ? error.message : 'Unable to load campaigns.');
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +132,7 @@ export default function CampaignsPage() {
               pointerEvents: 'none',
             }}
           />
-          <input className="input" style={{ paddingLeft: 36 }} placeholder="Search campaigns…" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <input className="input" style={{ paddingLeft: 36 }} placeholder="Search campaigns..." value={search} onChange={(event) => setSearch(event.target.value)} />
         </div>
         <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ gap: 6 }}>
           <Plus size={15} /> New Campaign
@@ -155,6 +161,13 @@ export default function CampaignsPage() {
           </button>
         ))}
       </div>
+
+      {loadError && (
+        <div className="alert alert-error" style={{ marginBottom: 20 }}>
+          <AlertCircle size={17} />
+          <span>{loadError}</span>
+        </div>
+      )}
 
       {showModal && (
         <div
@@ -207,7 +220,7 @@ export default function CampaignsPage() {
               Cancel
             </button>
             <button className="btn btn-primary" onClick={handleCreate} disabled={submitting}>
-              {submitting ? 'Creating…' : 'Create Campaign'}
+              {submitting ? 'Creating...' : 'Create Campaign'}
             </button>
           </div>
         </div>

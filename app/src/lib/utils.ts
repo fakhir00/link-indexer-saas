@@ -35,14 +35,6 @@ export function formatRelative(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export function formatCredits(n: number): string {
-  return n.toLocaleString();
-}
-
-export function formatMoney(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
 export function campaignProgress(campaign: { processedUrls: number; totalUrls: number }): number {
   if (campaign.totalUrls === 0) return 0;
   return Math.round((campaign.processedUrls / campaign.totalUrls) * 100);
@@ -76,14 +68,9 @@ export function getUrlStatusClass(status: UrlStatus): string {
   return map[status] ?? 'badge-queued';
 }
 
-export function maskApiKey(key: string): string {
-  if (key.length < 16) return key;
-  return key.substring(0, 12) + '••••••••••••' + key.substring(key.length - 4);
-}
-
 export function truncateUrl(url: string, maxLength = 60): string {
   if (url.length <= maxLength) return url;
-  return url.substring(0, maxLength) + '…';
+  return `${url.substring(0, maxLength)}...`;
 }
 
 export function sleep(ms: number): Promise<void> {

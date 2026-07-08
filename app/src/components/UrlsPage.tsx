@@ -20,13 +20,18 @@ export default function UrlsPage() {
   const [search, setSearch] = useState('');
   const [urls, setUrls] = useState<UrlItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [retryingAll, setRetryingAll] = useState(false);
 
   const loadUrls = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const response = await api.getUrls({ status: filter, search, limit: 200, offset: 0 });
       setUrls(response.urls);
+    } catch (error) {
+      setUrls([]);
+      setLoadError(error instanceof Error ? error.message : 'Unable to load URLs.');
     } finally {
       setLoading(false);
     }
@@ -102,7 +107,7 @@ export default function UrlsPage() {
         ))}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 14px' }} onClick={() => void handleRetryAll()} disabled={retryingAll || stats.failed === 0}>
-            <RefreshCw size={14} /> {retryingAll ? 'Retrying…' : 'Retry All Failed'}
+            <RefreshCw size={14} /> {retryingAll ? 'Retrying...' : 'Retry All Failed'}
           </button>
         </div>
       </div>
@@ -123,7 +128,7 @@ export default function UrlsPage() {
           <input
             className="input"
             style={{ paddingLeft: 36 }}
-            placeholder="Search URLs…"
+            placeholder="Search URLs..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -152,6 +157,13 @@ export default function UrlsPage() {
           </button>
         ))}
       </div>
+
+      {loadError && (
+        <div className="alert alert-error" style={{ marginBottom: 20 }}>
+          <AlertCircle size={17} />
+          <span>{loadError}</span>
+        </div>
+      )}
 
       <div className="table-container">
         <table>
@@ -184,7 +196,7 @@ export default function UrlsPage() {
                       {url.status}
                     </span>
                   </td>
-                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{url.campaign?.name ?? '—'}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{url.campaign?.name ?? '-'}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: url.retryCount >= url.maxRetries ? '#ef4444' : url.retryCount > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>
@@ -200,7 +212,7 @@ export default function UrlsPage() {
                         {formatRelative(url.lastAttemptAt)}
                       </span>
                     ) : (
-                      '—'
+                      '-'
                     )}
                   </td>
                   <td>

@@ -1,4 +1,6 @@
-// Tell Next.js to revalidate this page every 60 seconds so Googlebot gets fresh links
+const DEFAULT_PRODUCTION_API_URL = 'https://indexflow-backend-api.onrender.com';
+
+export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
 interface DirectoryUrl {
@@ -7,15 +9,15 @@ interface DirectoryUrl {
 }
 
 async function getLinks(): Promise<DirectoryUrl[]> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || DEFAULT_PRODUCTION_API_URL;
+
   try {
-    const res = await fetch(`${API_URL}/urls?status=completed&limit=1000`, {
-      next: { revalidate: 60 }
+    const res = await fetch(`${apiUrl}/urls?status=completed&limit=1000`, {
+      next: { revalidate: 60 },
     });
     const data = await res.json();
     return Array.isArray(data.urls) ? data.urls : [];
-  } catch (error) {
-    console.error('Failed to fetch directory links', error);
+  } catch {
     return [];
   }
 }
