@@ -4,7 +4,7 @@ export const campaignRepository = {
   findAll() {
     return prisma.campaign.findMany({
       include: { _count: { select: { urls: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }],
     });
   },
 
@@ -15,14 +15,21 @@ export const campaignRepository = {
     });
   },
 
-  create(data: { name: string; dripPerDay: number; urls: string[] }) {
+  create(data: { name: string; dripPerDay: number; priority?: number; tags?: string[]; urls: string[] }) {
+    const urlCount = data.urls.length;
     return prisma.campaign.create({
       data: {
         name: data.name,
         status: 'processing',
         dripPerDay: data.dripPerDay,
+        priority: data.priority ?? 5,
+        tags: data.tags ?? [],
+        totalUrls: urlCount,
+        submittedUrls: 0,
+        completedUrls: 0,
+        failedUrls: 0,
         urls: {
-          create: data.urls.map((link) => ({ link, status: 'queued' })),
+          create: data.urls.map((link) => ({ link, status: 'queued', priority: data.priority ?? 5 })),
         },
       },
       include: { urls: true },

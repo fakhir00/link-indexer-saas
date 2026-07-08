@@ -1,7 +1,8 @@
 import { campaignRepository } from '../repositories';
-import { indexQueue } from '../queue';
 import { HttpError, uniqueNormalizedUrls } from '../utils';
 import { hasEnabledIndexingStrategies } from '../indexing-strategies';
+import { enqueueUrl } from '../queue/producers/indexing.producer';
+import { getQueueForPriority } from '../queue/queues';
 
 function requireIndexingProvider() {
   if (!hasEnabledIndexingStrategies()) {
@@ -29,6 +30,8 @@ export const campaignService = {
         name: campaign.name,
         status: campaign.status,
         dripPerDay: campaign.dripPerDay,
+        priority: campaign.priority,
+        tags: campaign.tags,
         createdAt: campaign.createdAt,
         updatedAt: campaign.updatedAt,
         totalUrls,
@@ -38,7 +41,7 @@ export const campaignService = {
     });
   },
 
-  async create(input: { name: string; urls: string[]; dripPerDay?: number }) {
+  async create(input: { name: string; urls: string[]; dripPerDay?: number; priority?: number; tags?: string[] }) {
     requireIndexingProvider();
 
     const urls = uniqueNormalizedUrls(input.urls);
@@ -46,30 +49,41 @@ export const campaignService = {
       throw new HttpError(400, 'No valid URLs provided');
     }
 
+    const priority = Math.min(10, Math.max(1, input.priority ?? 5));
+
     const campaign = await campaignRepository.create({
       name: input.name,
       dripPerDay: input.dripPerDay ?? 30,
+      priority,
+      tags: input.tags ?? [],
       urls,
     });
 
     const dripPerDay = campaign.dripPerDay > 0 ? campaign.dripPerDay : 30;
 
-    await indexQueue.addBulk(
+    // Enqueue via priority-aware producer with drip delay
+    await Promise.all(
       campaign.urls.map((url, index) => {
         const dayOffset = Math.floor(index / dripPerDay);
         const delayMs = dayOffset * 24 * 60 * 60 * 1000;
 
-        return {
-          name: 'index-url',
-          data: { urlId: url.id, url: url.link },
-          opts: {
-            jobId: url.id,
-            attempts: 3,
-            backoff: { type: 'exponential' as const, delay: 2000 },
-            removeOnComplete: true,
+        const queue = getQueueForPriority(priority);
+        return queue.add(
+          'index-url',
+          {
+            urlId: url.id,
+            campaignId: campaign.id,
+            link: url.link,
+            strategy: 'auto',
+            priority,
+            attemptNumber: 0,
+          },
+          {
+            priority,
+            jobId: `url:${url.id}:attempt:0`,
             delay: delayMs > 0 ? delayMs : undefined,
           },
-        };
+        );
       }),
     );
 
@@ -77,6 +91,8 @@ export const campaignService = {
       id: campaign.id,
       name: campaign.name,
       status: campaign.status,
+      priority: campaign.priority,
+      tags: campaign.tags,
       totalUrls: campaign.urls.length,
       createdAt: campaign.createdAt,
     };

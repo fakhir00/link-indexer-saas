@@ -1,15 +1,34 @@
 import { prisma } from '../prisma';
-import { getQueueSnapshot, connection } from '../queue';
+import { connection } from '../queue';
+import { getAllQueueSnapshots } from '../queue/queues';
 import { getEnabledIndexingStrategies, hasEnabledIndexingStrategies, isUsingDryRunStrategy } from '../indexing-strategies';
 import { env } from '../config/env';
+
+// Legacy single-queue snapshot for /health endpoint
+async function getLegacyQueueSnapshot() {
+  try {
+    const snapshots = await getAllQueueSnapshots();
+    return snapshots.reduce(
+      (acc, q) => ({
+        waiting: acc.waiting + q.waiting,
+        active: acc.active + q.active,
+        completed: acc.completed + q.completed,
+        failed: acc.failed + q.failed,
+        delayed: acc.delayed + q.delayed,
+        paused: 0,
+        total: acc.total + q.total,
+      }),
+      { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, paused: 0, total: 0 },
+    );
+  } catch {
+    return { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, paused: 0, total: 0 };
+  }
+}
 
 export const systemService = {
   async getHealth() {
     let dbConnected = false;
     let redisConnected = false;
-    let queue = {
-      waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, paused: 0, total: 0,
-    };
 
     try {
       await prisma.$queryRaw`SELECT 1`;
@@ -24,13 +43,9 @@ export const systemService = {
       redisConnected = false;
     }
 
-    if (redisConnected) {
-      try {
-        queue = await getQueueSnapshot();
-      } catch {
-        // ignore queue errors for health response
-      }
-    }
+    const queue = redisConnected ? await getLegacyQueueSnapshot() : {
+      waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, paused: 0, total: 0,
+    };
 
     const healthy = dbConnected && redisConnected;
     return {
@@ -45,25 +60,40 @@ export const systemService = {
   },
 
   async getSystemDetails() {
-    const [queue, dbStatus, redisStatus] = await Promise.all([
-      getQueueSnapshot(),
+    const [queueSnapshots, dbStatus, redisStatus] = await Promise.all([
+      getAllQueueSnapshots(),
       prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false),
-      connection.ping().then((value) => value === 'PONG').catch(() => false),
+      connection.ping().then((v) => v === 'PONG').catch(() => false),
     ]);
 
-    const averageProcessingTime = 2.4;
+    const totalActive = queueSnapshots.reduce((s, q) => s + q.active, 0);
     const apiStatus = dbStatus && redisStatus ? 'healthy' : 'degraded';
+
+    // Aggregate for backwards-compat legacy 'queue' field
+    const queue = queueSnapshots.reduce(
+      (acc, q) => ({
+        waiting: acc.waiting + q.waiting,
+        active: acc.active + q.active,
+        completed: acc.completed + q.completed,
+        failed: acc.failed + q.failed,
+        delayed: acc.delayed + q.delayed,
+        paused: 0,
+        total: acc.total + q.total,
+      }),
+      { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, paused: 0, total: 0 },
+    );
 
     return {
       queue,
-      activeJobs: queue.active,
+      queues: queueSnapshots,   // New: per-queue breakdown
+      activeJobs: totalActive,
       workerConcurrency: env.workerConcurrency,
       enabledIndexingStrategies: getEnabledIndexingStrategies(),
       indexingReady: hasEnabledIndexingStrategies(),
       dryRunEnabled: isUsingDryRunStrategy(),
       dbConnected: dbStatus,
       redisConnected: redisStatus,
-      averageProcessingTime,
+      averageProcessingTime: 2.4,
       apiStatus,
     };
   },
