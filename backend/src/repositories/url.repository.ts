@@ -41,6 +41,18 @@ export const urlRepository = {
     });
   },
 
+  findByIdWithValidation(id: string) {
+    return prisma.url.findUnique({
+      where: { id },
+      include: {
+        validation: true,
+        timeline: { orderBy: { createdAt: 'asc' } },
+        submissionLogs: { orderBy: { createdAt: 'desc' }, take: 10 },
+        campaign: { select: { id: true, name: true, status: true } },
+      },
+    });
+  },
+
   updateStatus(id: string, data: { status: string; retryCount?: number; errorMessage?: string | null }) {
     return prisma.url.update({ where: { id }, data });
   },
@@ -139,5 +151,28 @@ export const urlRepository = {
       prisma.url.count({ where: { campaignId, status: 'processing' } }),
       prisma.url.count({ where: { campaignId, status: 'queued' } }),
     ]);
+  },
+
+  findUrlsByHealthScore(campaignId: string) {
+    return prisma.url.findMany({
+      where: { campaignId },
+      orderBy: { healthScore: 'desc' },
+      select: {
+        id: true,
+        link: true,
+        status: true,
+        healthScore: true,
+        technicalScore: true,
+        contentScore: true,
+        indexabilityScore: true,
+        validationStatus: true,
+        httpStatus: true,
+        isHttps: true,
+        robotsBlocked: true,
+        hasNoindex: true,
+        canonicalMismatch: true,
+        responseTimeMs: true,
+      },
+    });
   },
 };

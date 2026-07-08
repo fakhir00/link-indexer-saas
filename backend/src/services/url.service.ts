@@ -1,9 +1,8 @@
-import { urlRepository } from '../repositories';
-import { campaignRepository } from '../repositories';
-import { indexQueue } from '../queue';
+import { urlRepository, campaignRepository } from '../repositories';
 import { HttpError } from '../utils';
 import { hasEnabledIndexingStrategies } from '../indexing-strategies';
 import type { UrlsQueryInput } from '../validators';
+import { enqueueForValidation } from '../queue/producers/validation.producer';
 
 function requireIndexingProvider() {
   if (!hasEnabledIndexingStrategies()) {
@@ -20,10 +19,18 @@ export const urlService = {
     return { urls, total, limit: params.limit, offset: params.offset };
   },
 
+  async getDetails(id: string) {
+    const url = await urlRepository.findByIdWithValidation(id);
+    if (!url) {
+      throw new HttpError(404, 'URL not found');
+    }
+    return url;
+  },
+
   async retry(id: string) {
     requireIndexingProvider();
 
-    const url = await urlRepository.findById(id);
+    const url = await urlRepository.findByIdWithCampaign(id);
     if (!url) {
       throw new HttpError(404, 'URL not found');
     }
@@ -33,11 +40,15 @@ export const urlService = {
 
     await urlRepository.resetForRetry(url.id);
     await campaignRepository.updateStatus(url.campaignId, 'processing');
-    await indexQueue.add(
-      'index-url',
-      { urlId: url.id, url: url.link },
-      { jobId: url.id, attempts: 3, backoff: { type: 'exponential' as const, delay: 2000 } },
-    );
+    
+    // Send to validation queue which then automatically queues for indexing
+    await enqueueForValidation({
+      urlId: url.id,
+      link: url.link,
+      campaignId: url.campaignId,
+      userPriority: 2, // high priority for manual retries
+      enqueueForIndexingAfter: true,
+    });
   },
 
   async retryAllFailed() {
@@ -52,12 +63,17 @@ export const urlService = {
     const campaignIds = Array.from(new Set(failedUrls.map((u) => u.campaignId)));
 
     await urlRepository.bulkResetForRetry(ids, campaignIds);
-    await indexQueue.addBulk(
-      failedUrls.map((url) => ({
-        name: 'index-url',
-        data: { urlId: url.id, url: url.link },
-        opts: { jobId: url.id, attempts: 3, backoff: { type: 'exponential' as const, delay: 2000 } },
-      })),
+    
+    await Promise.all(
+      failedUrls.map((url) => 
+        enqueueForValidation({
+          urlId: url.id,
+          link: url.link,
+          campaignId: url.campaignId,
+          userPriority: 5, // normal priority for bulk retries
+          enqueueForIndexingAfter: true,
+        })
+      )
     );
 
     return failedUrls.length;

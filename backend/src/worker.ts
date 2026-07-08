@@ -1,10 +1,12 @@
 /**
- * worker.ts — entrypoint for the BullMQ worker process.
- * Delegates to the new priority-queue consumer.
- * Kept for backwards compatibility with render.yaml startCommand.
+ * worker.ts — worker process entrypoint.
+ * Starts all queue consumers: indexing (5 priority queues) + validation.
  */
 import { startIndexingWorkers } from './queue/consumers/indexing.consumer';
+import { startValidationWorker } from './queue/consumers/validation.consumer';
 
-export const workers = startIndexingWorkers();
+export const indexingWorkers = startIndexingWorkers();
+export const validationWorker = startValidationWorker();
 
-export { workers as worker };
+// Backwards-compat export
+export const worker = indexingWorkers[0];

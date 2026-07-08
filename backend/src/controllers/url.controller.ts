@@ -10,6 +10,11 @@ export const urlController = {
     res.json(result);
   },
 
+  async getDetails(req: Request, res: Response) {
+    const result = await urlService.getDetails(String(req.params.id));
+    res.json(result);
+  },
+
   async retry(req: Request, res: Response) {
     await urlService.retry(String(req.params.id));
     res.json({ success: true });
