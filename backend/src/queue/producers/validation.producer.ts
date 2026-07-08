@@ -12,7 +12,7 @@ export interface ValidationJobData {
 export async function enqueueForValidation(data: ValidationJobData, options?: { delayMs?: number }): Promise<void> {
   try {
     await validationQueue.add('validate-url', data, {
-      jobId: `validate:${data.urlId}`,
+      jobId: `validate-${data.urlId}`,
       priority: data.userPriority,
       delay: options?.delayMs,
     });
