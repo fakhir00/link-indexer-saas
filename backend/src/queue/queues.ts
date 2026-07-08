@@ -4,13 +4,13 @@ import { connection } from '../queue';
 // Priority queues — lower BullMQ priority number = processed first
 // We map 1=critical → BullMQ priority 1, 2=high → 2, etc.
 export const QUEUE_NAMES = {
-  CRITICAL: 'indexing:critical',
-  HIGH:     'indexing:high',
-  MEDIUM:   'indexing:medium',
-  LOW:      'indexing:low',
-  RETRY:    'indexing:retry',
-  DLQ:      'indexing:dlq',
-  VALIDATION: 'url:validation',
+  CRITICAL: 'indexing-critical',
+  HIGH:     'indexing-high',
+  MEDIUM:   'indexing-medium',
+  LOW:      'indexing-low',
+  RETRY:    'indexing-retry',
+  DLQ:      'indexing-dlq',
+  VALIDATION: 'url-validation',
 } as const;
 
 export type QueueName = typeof QUEUE_NAMES[keyof typeof QUEUE_NAMES];
