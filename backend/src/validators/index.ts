@@ -7,5 +7,5 @@ export type { UrlsQueryInput } from './url.validator';
 export { createApiKeySchema } from './api-key.validator';
 export type { CreateApiKeyInput } from './api-key.validator';
 
-export { toolsGoogleIndexSchema } from './tools.validator';
-export type { ToolsGoogleIndexInput } from './tools.validator';
+export { toolsGoogleIndexSchema, toolsVerifyIndexSchema } from './tools.validator';
+export type { ToolsGoogleIndexInput, ToolsVerifyIndexInput } from './tools.validator';
