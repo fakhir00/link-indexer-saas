@@ -1,0 +1,155 @@
+.sidebar {
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  overflow: hidden;
+}
+
+/* Subtle gradient accent on left edge */
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--gradient-brand);
+  opacity: 0.6;
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.logoIcon {
+  width: 36px;
+  height: 36px;
+  background: var(--gradient-brand);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 16px rgba(99,102,241,0.35);
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.03em;
+}
+
+/* Nav */
+.nav {
+  flex: 1;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  position: relative;
+}
+
+.navItem:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.navItem.active {
+  background: rgba(99,102,241,0.12);
+  color: var(--text-brand);
+  border: 1px solid rgba(99,102,241,0.2);
+}
+
+.navItem.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--brand-primary);
+  border-radius: 0 2px 2px 0;
+}
+
+.navIcon {
+  font-size: 17px;
+  width: 24px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Bottom */
+.sidebarBottom {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.plan {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.planBadge {
+  background: var(--gradient-brand);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.planInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.planLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.planName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}

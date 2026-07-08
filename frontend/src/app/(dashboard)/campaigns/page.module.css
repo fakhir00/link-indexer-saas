@@ -1,0 +1,161 @@
+.page { max-width: 1200px; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 4px;
+}
+
+.subtitle { font-size: 14px; color: var(--text-muted); }
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+/* Campaign Card */
+.campaignCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.campaignCard:hover {
+  border-color: var(--border-brand);
+  box-shadow: var(--shadow-glow-sm);
+  transform: translateY(-2px);
+}
+
+.campaignBody {
+  padding: 24px;
+  flex: 1;
+  text-decoration: none;
+  display: block;
+}
+
+.campaignHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.campaignName {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+/* Progress */
+.progressSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--gradient-brand);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.progressPct {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 32px;
+}
+
+/* Stats row */
+.campaignStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statVal {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.statVal.success { color: var(--brand-success); }
+.statVal.danger  { color: var(--brand-danger); }
+
+.statKey {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+/* Actions row */
+.campaignActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.campaignDate {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 64px 32px !important;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.emptyIcon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.emptyState h3 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.emptyState p {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
