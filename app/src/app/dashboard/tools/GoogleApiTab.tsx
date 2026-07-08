@@ -1,31 +1,38 @@
 'use client';
 
 import { useState } from 'react';
-import { api } from '@/lib/api';
+import { AlertTriangle, CheckCircle2, KeyRound, Send, XCircle } from 'lucide-react';
+import { api, GoogleIndexResult } from '@/lib/api';
+
+function parseUrls(value: string) {
+  return value
+    .split(/[\n,]+/)
+    .map((url) => url.trim())
+    .filter(Boolean);
+}
 
 export default function GoogleApiTab() {
   const [urls, setUrls] = useState('');
   const [serviceAccount, setServiceAccount] = useState('');
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[] | null>(null);
+  const [results, setResults] = useState<GoogleIndexResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    const urlList = urls.split('\\n').map(u => u.trim()).filter(Boolean);
+    const urlList = parseUrls(urls);
     if (urlList.length === 0) {
-      alert('Please enter at least one URL');
+      setError('Add at least one URL.');
       return;
     }
     if (!serviceAccount.trim()) {
-      alert('Please enter your Service Account JSON');
+      setError('Paste a Google service account JSON payload.');
       return;
     }
 
     try {
-      // Validate JSON parse locally first
       JSON.parse(serviceAccount);
     } catch {
-      alert('Invalid JSON format for Service Account');
+      setError('Service account JSON is invalid.');
       return;
     }
 
@@ -35,58 +42,63 @@ export default function GoogleApiTab() {
     try {
       const response = await api.tools.googleIndex(serviceAccount, urlList);
       setResults(response.results);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while pinging Google');
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Google submission failed.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', gap: 24 }}>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-            🔗 URLs to Index
-          </h3>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="alert alert-warning">
+        <AlertTriangle size={17} />
+        <span>
+          Use this only for URL types and properties eligible for the Google Indexing API. For normal pages, run campaigns and verification instead.
+        </span>
+      </div>
+
+      <div className="tool-input-grid">
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 8 }}>URLs</label>
           <textarea
             className="input"
-            style={{ height: 200, fontFamily: 'monospace', whiteSpace: 'pre' }}
-            placeholder="Paste URLs to submit (one per line)"
+            style={{ height: 220, fontFamily: 'var(--font-mono)', whiteSpace: 'pre' }}
+            placeholder="https://example.com/page-1&#10;https://example.com/page-2"
             value={urls}
-            onChange={e => setUrls(e.target.value)}
+            onChange={(event) => setUrls(event.target.value)}
           />
         </div>
 
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600 }}>
-              🔑 Google Service Account
-            </h3>
-            <span style={{ fontSize: 11, color: 'var(--text-brand)' }}>No data saved</span>
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 700 }}>Service account JSON</label>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Used for this request only</span>
           </div>
           <textarea
             className="input"
-            style={{ height: 200, fontFamily: 'monospace', fontSize: 11, background: 'var(--bg-surface-2)' }}
+            style={{ height: 220, fontFamily: 'var(--font-mono)', fontSize: 11, background: 'var(--bg-surface-2)' }}
             placeholder='{"type": "service_account", "project_id": "...", ...}'
             value={serviceAccount}
-            onChange={e => setServiceAccount(e.target.value)}
+            onChange={(event) => setServiceAccount(event.target.value)}
           />
         </div>
       </div>
 
-      <button 
-        className="btn btn-primary" 
-        style={{ width: '100%', padding: '14px', background: 'linear-gradient(to right, #2563eb, #3b82f6)' }}
+      <button
+        className="btn btn-primary"
+        style={{ width: '100%', padding: '13px' }}
         onClick={handleSubmit}
         disabled={loading}
       >
-        {loading ? 'Submitting to Google...' : '🚀 Submit to Google Indexing API'}
+        {loading ? <KeyRound size={15} className="animate-spin" /> : <Send size={15} />}
+        {loading ? 'Submitting...' : 'Submit to Google Indexing API'}
       </button>
 
       {error && (
-        <div style={{ padding: 16, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 8 }}>
-          {error}
+        <div className="alert alert-error">
+          <AlertTriangle size={17} />
+          <span>{error}</span>
         </div>
       )}
 
@@ -101,14 +113,20 @@ export default function GoogleApiTab() {
               </tr>
             </thead>
             <tbody>
-              {results.map((r, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                  <td style={{ padding: '8px 0', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{r.url}</td>
+              {results.map((result) => (
+                <tr key={result.url} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td style={{ padding: '8px 0', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{result.url}</td>
                   <td style={{ padding: '8px 0' }}>
-                    {r.success ? (
-                      <span className="badge badge-completed">Success</span>
+                    {result.success ? (
+                      <span className="badge badge-completed">
+                        <CheckCircle2 size={12} />
+                        Accepted
+                      </span>
                     ) : (
-                      <span className="badge badge-failed" title={r.error}>Failed</span>
+                      <span className="badge badge-failed" title={result.error}>
+                        <XCircle size={12} />
+                        Failed
+                      </span>
                     )}
                   </td>
                 </tr>

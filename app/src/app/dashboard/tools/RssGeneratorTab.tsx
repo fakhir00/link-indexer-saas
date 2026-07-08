@@ -1,93 +1,152 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Download, FileText } from 'lucide-react';
+
+function parseUrls(value: string) {
+  return value
+    .split(/[\n,]+/)
+    .map((url) => url.trim())
+    .filter(Boolean);
+}
+
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'indexflow-feed';
+}
 
 export default function RssGeneratorTab() {
   const [urls, setUrls] = useState('');
-  const [feedTitle, setFeedTitle] = useState('My Backlinks Feed');
+  const [feedTitle, setFeedTitle] = useState('IndexFlow backlink feed');
+  const [error, setError] = useState<string | null>(null);
+
+  const urlList = useMemo(() => parseUrls(urls), [urls]);
 
   const generateRSS = () => {
-    const urlList = urls.split('\\n').map(u => u.trim()).filter(Boolean);
     if (urlList.length === 0) {
-      alert('Please enter at least one URL');
+      setError('Add at least one URL to generate a feed.');
       return;
     }
 
     const now = new Date().toUTCString();
-    
-    let xml = `<?xml version="1.0" encoding="UTF-8" ?>\\n`;
-    xml += `<rss version="2.0">\\n`;
-    xml += `  <channel>\\n`;
-    xml += `    <title>${feedTitle.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</title>\\n`;
-    xml += `    <link>https://example.com</link>\\n`;
-    xml += `    <description>Custom generated backlinks feed</description>\\n`;
-    xml += `    <lastBuildDate>${now}</lastBuildDate>\\n`;
+    const safeTitle = escapeXml(feedTitle.trim() || 'IndexFlow backlink feed');
+    const items = urlList
+      .map((url) => {
+        const safeUrl = escapeXml(url);
+        return [
+          '    <item>',
+          `      <title>${safeUrl}</title>`,
+          `      <link>${safeUrl}</link>`,
+          `      <guid isPermaLink="true">${safeUrl}</guid>`,
+          `      <pubDate>${now}</pubDate>`,
+          '    </item>',
+        ].join('\n');
+      })
+      .join('\n');
 
-    urlList.forEach(url => {
-      xml += `    <item>\\n`;
-      xml += `      <title>${url}</title>\\n`;
-      xml += `      <link>${url}</link>\\n`;
-      xml += `      <guid>${url}</guid>\\n`;
-      xml += `      <pubDate>${now}</pubDate>\\n`;
-      xml += `    </item>\\n`;
-    });
-
-    xml += `  </channel>\\n`;
-    xml += `</rss>`;
+    const xml = [
+      '<?xml version="1.0" encoding="UTF-8" ?>',
+      '<rss version="2.0">',
+      '  <channel>',
+      `    <title>${safeTitle}</title>`,
+      '    <link>https://indexflow.local/feed</link>',
+      '    <description>Generated URL discovery feed</description>',
+      `    <lastBuildDate>${now}</lastBuildDate>`,
+      items,
+      '  </channel>',
+      '</rss>',
+    ].join('\n');
 
     const blob = new Blob([xml], { type: 'application/rss+xml' });
     const blobUrl = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = `${feedTitle.replace(/\\s+/g, '-').toLowerCase()}-feed.xml`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `${slugify(feedTitle)}.xml`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(blobUrl);
+    setError(null);
   };
 
   return (
-    <div style={{ display: 'flex', gap: 24, flexDirection: 'column' }}>
-      <div>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-          📡 RSS Feed URLs
-        </h3>
-        <textarea
-          className="input"
-          style={{ height: 220, fontFamily: 'monospace', whiteSpace: 'pre', marginBottom: 16 }}
-          placeholder="Paste URLs to include in RSS feed (one per line)"
-          value={urls}
-          onChange={e => setUrls(e.target.value)}
-        />
-        
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-              Feed Title
-            </label>
-            <input 
-              className="input" 
-              value={feedTitle}
-              onChange={e => setFeedTitle(e.target.value)}
-            />
-          </div>
-          <button 
-            className="btn btn-primary" 
-            style={{ padding: '10px 24px', marginTop: 20, background: 'linear-gradient(to right, #f59e0b, #d97706)' }}
-            onClick={generateRSS}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="tool-input-grid">
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 8 }}>URLs</label>
+          <textarea
+            className="input"
+            style={{ height: 220, fontFamily: 'var(--font-mono)', whiteSpace: 'pre' }}
+            placeholder="https://example.com/backlink-1&#10;https://example.com/backlink-2"
+            value={urls}
+            onChange={(event) => setUrls(event.target.value)}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+            One URL per line. The generated feed is downloaded locally.
+          </p>
+        </div>
+
+        <div className="card" style={{ padding: 16, background: 'var(--bg-surface-2)' }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(245,158,11,0.12)',
+              color: '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 14,
+            }}
           >
-            📥 Download XML Feed
+            <FileText size={20} />
+          </div>
+          <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 8 }}>Feed title</label>
+          <input className="input" value={feedTitle} onChange={(event) => setFeedTitle(event.target.value)} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 18 }}>
+            <div className="metric-tile">
+              <span>Items</span>
+              <strong>{urlList.length}</strong>
+            </div>
+            <div className="metric-tile">
+              <span>Format</span>
+              <strong>RSS</strong>
+            </div>
+          </div>
+
+          <button className="btn btn-primary" style={{ width: '100%', marginTop: 18 }} onClick={generateRSS}>
+            <Download size={15} />
+            Download Feed
           </button>
         </div>
       </div>
-      
-      <div className="card" style={{ padding: 16, background: 'var(--bg-surface-2)', border: '1px dashed var(--border-brand)' }}>
-        <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>What do I do with this feed?</h4>
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-          You can submit the downloaded <code>.xml</code> file to RSS directories and ping services like Feedburner, Blogtrottr, and Feedly.
-          This creates natural crawling paths for search engine bots to discover your backlinks!
-        </p>
+
+      {error && (
+        <div className="alert alert-error">
+          <AlertTriangle size={17} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="alert alert-info">
+        <FileText size={17} />
+        <span>
+          RSS feeds help create clean discovery paths. Submit the feed where appropriate, then use verification to check whether URLs become indexable or indexed.
+        </span>
       </div>
     </div>
   );

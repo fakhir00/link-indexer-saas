@@ -1,4 +1,21 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin.replace(':3000', ':4000') : 'http://localhost:4000');
+const DEFAULT_PRODUCTION_API_URL = 'https://indexflow-backend-api.onrender.com';
+
+function resolveApiUrl() {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    const { hostname, origin } = window.location;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return origin.replace(':3000', ':4000');
+    }
+  }
+
+  return DEFAULT_PRODUCTION_API_URL;
+}
+
+const API_URL = resolveApiUrl();
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
@@ -122,6 +139,52 @@ export interface SystemHealth {
   apiStatus: 'healthy' | 'degraded';
 }
 
+export type IndexVerificationProvider = 'auto' | 'dataforseo' | 'google-cse' | 'dry-run';
+export type IndexVerificationStatus = 'indexed' | 'not_indexed' | 'unknown' | 'error';
+
+export interface IndexVerificationResult {
+  url: string;
+  status: IndexVerificationStatus;
+  indexed: boolean | null;
+  provider: Exclude<IndexVerificationProvider, 'auto'> | 'none';
+  confidence: number;
+  checkedAt: string;
+  evidence?: {
+    mode?: string;
+    isIndexable?: boolean;
+    httpStatus?: number;
+    finalUrl?: string;
+    robotsBlocked?: boolean;
+    noindex?: boolean;
+    canonicalMismatch?: boolean;
+    warnings?: string[];
+    matchedUrl?: string;
+    matchedTitle?: string;
+    itemsChecked?: number;
+    totalResults?: number;
+    query?: string;
+  };
+  recommendation?: string;
+  error?: string;
+}
+
+export interface IndexVerificationResponse {
+  success: boolean;
+  provider: IndexVerificationProvider;
+  configuredProviders: {
+    dataforseo: boolean;
+    googleCse: boolean;
+  };
+  results: IndexVerificationResult[];
+}
+
+export interface GoogleIndexResult {
+  url: string;
+  success: boolean;
+  status?: number;
+  error?: string;
+}
+
 export const api = {
   getAnalytics: () => request<AnalyticsResponse>('/analytics'),
 
@@ -163,11 +226,13 @@ export const api = {
 
   tools: {
     googleIndex: (serviceAccountJson: string, urls: string[]) =>
-      request<{ success: boolean; results: Array<{ url: string; success: boolean; status?: number; error?: string }> }>(
+      request<{ success: boolean; results: GoogleIndexResult[] }>(
         '/tools/google-index',
         'POST',
         { serviceAccountJson, urls }
       ),
+    verifyIndex: (urls: string[], provider: IndexVerificationProvider = 'auto') =>
+      request<IndexVerificationResponse>('/tools/verify-index', 'POST', { urls, provider }),
   },
 
   getSystem: () => request<SystemHealth>('/system'),

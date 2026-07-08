@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, Zap, BarChart3, Settings, Activity, Globe, Menu, X, ChevronRight, Wrench } from 'lucide-react';
+import { LayoutDashboard, Zap, BarChart3, Globe, Menu, X, ChevronRight, Wrench } from 'lucide-react';
 
 interface NavGroup {
   label: string;
@@ -29,19 +29,7 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/campaigns', icon: <Zap size={17} />, label: 'Campaigns' },
       { href: '/dashboard/urls', icon: <Globe size={17} />, label: 'URLs' },
       { href: '/dashboard/analytics', icon: <BarChart3 size={17} />, label: 'Analytics' },
-    ],
-  },
-  {
-    label: 'Utilities',
-    items: [
-      { href: '/dashboard/tools', icon: <Wrench size={17} />, label: 'Quick Tools' },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { href: '/dashboard/system', icon: <Activity size={17} />, label: 'System Health' },
-      { href: '/dashboard/settings', icon: <Settings size={17} />, label: 'Settings' },
+      { href: '/dashboard/tools', icon: <Wrench size={17} />, label: 'Tools' },
     ],
   },
 ];
@@ -60,19 +48,19 @@ function SidebarContent({ pathname, closeMobile }: SidebarContentProps) {
               style={{
                 width: 36,
                 height: 36,
-                borderRadius: '10px',
+                borderRadius: '8px',
                 background: 'var(--gradient-brand)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: 'var(--glow-primary)',
-                fontSize: 18,
+                color: '#fff',
               }}
             >
-              ⚡
+              <Zap size={18} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>IndexFlow</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>IndexFlow</div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>Control Panel</div>
             </div>
           </div>

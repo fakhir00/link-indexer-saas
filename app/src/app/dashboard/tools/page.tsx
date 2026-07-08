@@ -2,79 +2,85 @@
 
 import { useState } from 'react';
 import TopBar from '@/components/TopBar';
+import { FileText, KeyRound, RadioTower, SearchCheck } from 'lucide-react';
 import PingServicesTab from './PingServicesTab';
 import IndexStatusTab from './IndexStatusTab';
 import GoogleApiTab from './GoogleApiTab';
 import RssGeneratorTab from './RssGeneratorTab';
-import SocialBookmarks from './SocialBookmarks';
+
+const tabs = [
+  {
+    id: 'status',
+    label: 'Index Verification',
+    description: 'Check if URLs are indexed or at least technically indexable.',
+    icon: SearchCheck,
+  },
+  {
+    id: 'ping',
+    label: 'Discovery Pings',
+    description: 'Generate safe ping URLs without opening dozens of tabs automatically.',
+    icon: RadioTower,
+  },
+  {
+    id: 'rss',
+    label: 'RSS Feed',
+    description: 'Package backlinks into an RSS feed for discovery workflows.',
+    icon: FileText,
+  },
+  {
+    id: 'google',
+    label: 'Google API',
+    description: 'Advanced direct submission for eligible Google Indexing API URL types.',
+    icon: KeyRound,
+  },
+] as const;
+
+type ToolTab = (typeof tabs)[number]['id'];
 
 export default function ToolsPage() {
-  const [activeTab, setActiveTab] = useState<'ping' | 'status' | 'google' | 'rss'>('ping');
-
-  const tabs = [
-    { id: 'ping', label: 'Ping Services', icon: '🚀' },
-    { id: 'status', label: 'Check Index Status', icon: '🔍' },
-    { id: 'google', label: 'Google Indexing API', icon: '🔑' },
-    { id: 'rss', label: 'RSS Feed Generator', icon: '📡' },
-  ] as const;
+  const [activeTab, setActiveTab] = useState<ToolTab>('status');
+  const activeTabDetails = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const ActiveIcon = activeTabDetails.icon;
 
   return (
     <>
-      <TopBar title="Quick Indexing Tools" subtitle="Get your backlinks discovered manually by search engines faster" />
+      <TopBar title="Tools" subtitle="Verify, prepare and safely test URL discovery workflows" />
       <div className="page-enter" style={{ padding: 28 }}>
-        <div style={{ display: 'flex', gap: 20 }}>
-          {/* Main Content Area */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface-2)' }}>
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    style={{
-                      flex: 1,
-                      padding: '16px',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: activeTab === tab.id ? '2px solid var(--text-brand)' : '2px solid transparent',
-                      color: activeTab === tab.id ? 'var(--text-brand)' : 'var(--text-secondary)',
-                      fontWeight: activeTab === tab.id ? 700 : 600,
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <span>{tab.icon}</span> {tab.label}
-                  </button>
-                ))}
-              </div>
-              <div style={{ padding: 24, minHeight: 400 }}>
-                {activeTab === 'ping' && <PingServicesTab />}
-                {activeTab === 'status' && <IndexStatusTab />}
-                {activeTab === 'google' && <GoogleApiTab />}
-                {activeTab === 'rss' && <RssGeneratorTab />}
-              </div>
-            </div>
-          </div>
+        <div className="tools-shell">
+          <aside className="tools-nav card">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
 
-          {/* Right Sidebar */}
-          <div style={{ width: 320, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <SocialBookmarks />
-            
-            <div className="card" style={{ background: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: '#10b981' }}>💡 Indexing Tips</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <li style={{ display: 'flex', gap: 8 }}><span style={{ color: '#10b981' }}>✓</span> Use our automated campaigns for drip-feeding to avoid spam patterns.</li>
-                <li style={{ display: 'flex', gap: 8 }}><span style={{ color: '#10b981' }}>✓</span> Submit RSS feeds to aggregators like Feedburner.</li>
-                <li style={{ display: 'flex', gap: 8 }}><span style={{ color: '#10b981' }}>✓</span> Share your best links manually on high-authority social platforms.</li>
-                <li style={{ display: 'flex', gap: 8 }}><span style={{ color: '#f59e0b' }}>!</span> Indexing is never guaranteed by Google. Quality content matters most.</li>
-              </ul>
+              return (
+                <button key={tab.id} className={`tool-nav-item ${active ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
+                  <span className="tool-nav-icon">
+                    <Icon size={17} />
+                  </span>
+                  <span>
+                    <strong>{tab.label}</strong>
+                    <small>{tab.description}</small>
+                  </span>
+                </button>
+              );
+            })}
+          </aside>
+
+          <section className="card tool-panel">
+            <div style={{ padding: '22px 24px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <ActiveIcon size={18} color="var(--text-brand)" />
+                <h2 style={{ fontSize: 17, fontWeight: 800 }}>{activeTabDetails.label}</h2>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{activeTabDetails.description}</p>
             </div>
-          </div>
+            <div style={{ padding: 24, minHeight: 430 }}>
+              {activeTab === 'status' && <IndexStatusTab />}
+              {activeTab === 'ping' && <PingServicesTab />}
+              {activeTab === 'rss' && <RssGeneratorTab />}
+              {activeTab === 'google' && <GoogleApiTab />}
+            </div>
+          </section>
         </div>
       </div>
     </>
