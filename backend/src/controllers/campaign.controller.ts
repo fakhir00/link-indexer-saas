@@ -6,7 +6,7 @@ import { createCampaignSchema, statusUpdateSchema } from '../validators';
 export const campaignController = {
   async list(_req: Request, res: Response) {
     const campaigns = await campaignService.list();
-    res.json(campaigns);
+    res.json({ campaigns, total: campaigns.length });
   },
 
   async getById(req: Request, res: Response) {
@@ -23,6 +23,16 @@ export const campaignController = {
   async updateStatus(req: Request, res: Response) {
     const { status } = parseOrThrow(statusUpdateSchema, req.body);
     await campaignService.updateStatus(String(req.params.id), status);
+    res.json({ success: true });
+  },
+
+  async pause(req: Request, res: Response) {
+    await campaignService.updateStatus(String(req.params.id), 'paused');
+    res.json({ success: true });
+  },
+
+  async resume(req: Request, res: Response) {
+    await campaignService.updateStatus(String(req.params.id), 'processing');
     res.json({ success: true });
   },
 

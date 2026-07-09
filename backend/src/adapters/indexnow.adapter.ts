@@ -33,23 +33,22 @@ export class IndexNowAdapter implements IndexingAdapter {
   }
 
   isConfigured(): boolean {
-    return !!this.key && !!this.host;
+    // Only need a key to be configured — host is derived per-URL
+    return !!this.key;
   }
 
   async submit(url: string, _context?: SubmissionContext): Promise<AdapterResult> {
     if (!this.isConfigured()) {
-      throw new Error('IndexNow is not configured. Missing INDEXNOW_KEY or INDEXNOW_HOST.');
+      throw new Error('IndexNow is not configured. Missing INDEXNOW_KEY.');
     }
 
     const parsedUrl = new URL(url);
-    if (parsedUrl.hostname !== this.host) {
-      throw new Error(`IndexNow host mismatch: ${parsedUrl.hostname} is not ${this.host}`);
-    }
+    const urlHost = parsedUrl.hostname;
 
     const response = await postJson(
       this.endpoint,
       {
-        host: this.host,
+        host: urlHost,
         key: this.key,
         keyLocation: this.keyLocation,
         urlList: [url],
@@ -58,13 +57,14 @@ export class IndexNowAdapter implements IndexingAdapter {
     );
 
     if (!response.ok) {
-      throw new Error(`${response.status} ${response.statusText}`);
+      const body = await response.text().catch(() => '');
+      throw new Error(`IndexNow ${response.status}: ${body || response.statusText}`);
     }
 
     return {
       adapter: this.name,
       success: true,
-      detail: `Submitted to ${new URL(this.endpoint).host}`,
+      detail: `Submitted ${urlHost} to ${new URL(this.endpoint).host}`,
     };
   }
 }
