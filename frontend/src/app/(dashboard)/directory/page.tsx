@@ -12,19 +12,27 @@ export default function DirectoryPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  async function load(p: number) {
-    setLoading(true);
-    try {
-      const res = await api.directory({ page: p, limit: 25 });
-      setUrls(res.urls ?? []);
-      setTotalPages(res.totalPages ?? 1);
-      setTotal(res.total ?? 0);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    let cancelled = false;
 
-  useEffect(() => { load(page); }, [page]);
+    async function load() {
+      setLoading(true);
+      try {
+        const res = await api.directory({ page, limit: 25 });
+        if (cancelled) return;
+        setUrls(res.urls ?? []);
+        setTotalPages(res.totalPages ?? 1);
+        setTotal(res.total ?? 0);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [page]);
 
   const getDomain = (url: string) => {
     try { return new URL(url).hostname; } catch { return url; }

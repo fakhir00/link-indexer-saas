@@ -1,209 +1,172 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import styles from './page.module.css';
+
+const platformFeatures = [
+  {
+    label: 'Sitemap Discovery',
+    title: 'Find every live sitemap path.',
+    desc: 'Robots.txt directives, common sitemap paths, gzipped XML and nested sitemap indexes are scanned from one workflow.',
+  },
+  {
+    label: 'Topic Gaps',
+    title: 'Compare URLs before crawling pages.',
+    desc: 'Clean sitemap slugs are converted into topic signals so teams can see competitor coverage gaps quickly.',
+  },
+  {
+    label: 'Indexing Queue',
+    title: 'Turn discovered URLs into campaigns.',
+    desc: 'Push your own sitemap URLs directly into the IndexFlow validation, priority queue and retry pipeline.',
+  },
+  {
+    label: 'Operations',
+    title: 'Monitor campaigns like infrastructure.',
+    desc: 'Track validation status, queued URLs, retries, failures, public directories, RSS feeds and sitemap outputs.',
+  },
+];
+
+const workflow = [
+  'Discover sitemap files',
+  'Filter indexable content URLs',
+  'Compare competitor topics',
+  'Create indexing campaigns',
+  'Monitor queue and retries',
+];
 
 export default function LandingPage() {
   return (
     <main className={styles.main}>
-      {/* ── Nav ────────────────────────────────────────────── */}
       <nav className={styles.nav}>
         <div className={styles.navInner}>
-          <div className={styles.navLogo}>
-            <div className={styles.navLogoIcon}>⚡</div>
-            <span className={styles.navLogoText}>IndexFlow</span>
-          </div>
+          <Link href="/" className={styles.brand}>
+            <span className={styles.brandMark}>IF</span>
+            <span>IndexFlow</span>
+          </Link>
           <div className={styles.navLinks}>
-            <Link href="#features">Features</Link>
-            <Link href="#pricing">Pricing</Link>
+            <Link href="#platform">Platform</Link>
+            <Link href="#workflow">Workflow</Link>
             <Link href="/directory">Directory</Link>
             <Link href="/dashboard" className={styles.navCta}>
-              Open Dashboard →
+              Open Dashboard
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* ── Hero ──────────────────────────────────────────── */}
       <section className={styles.hero}>
-        {/* Background glow orbs */}
-        <div className={styles.heroOrb1} />
-        <div className={styles.heroOrb2} />
-
-        <div className={styles.heroBadge}>
-          <span className={styles.heroBadgeDot} />
-          Live Indexing Pipeline — IndexNow, Google, Bing
-        </div>
-
-        <h1 className={styles.heroTitle}>
-          Get Every URL
-          <br />
-          <span className={styles.gradientText}>Indexed Fast</span>
-        </h1>
-
-        <p className={styles.heroSubtitle}>
-          IndexFlow submits your URLs across every major search engine in parallel,
-          monitors health scores in real time, and auto-retries failures — so you
-          never miss a page in the index again.
-        </p>
-
-        <div className={styles.heroCtas}>
-          <Link href="/dashboard" className={styles.ctaPrimary}>
-            Start Indexing Free
-          </Link>
-          <Link href="/directory" className={styles.ctaSecondary}>
-            View Public Directory
-          </Link>
-        </div>
-
-        {/* Stats Row */}
-        <div className={styles.heroStats}>
-          {[
-            { value: '10M+', label: 'URLs Indexed' },
-            { value: '99.7%', label: 'Success Rate' },
-            { value: '< 24h', label: 'Avg. Index Time' },
-            { value: '4', label: 'Search Engines' },
-          ].map((s) => (
-            <div key={s.label} className={styles.heroStat}>
-              <span className={styles.heroStatValue}>{s.value}</span>
-              <span className={styles.heroStatLabel}>{s.label}</span>
-            </div>
-          ))}
+        <Image
+          src="/sitemap-dashboard-mockup.jpg"
+          alt="IndexFlow sitemap intelligence dashboard showing keyword gaps and sitemap analysis"
+          fill
+          priority
+          sizes="100vw"
+          className={styles.heroImage}
+        />
+        <div className={styles.heroShade} />
+        <div className={styles.heroContent}>
+          <p className={styles.heroKicker}>Sitemap intelligence meets live URL indexing</p>
+          <h1 className={styles.heroTitle}>IndexFlow Sitemap Intelligence</h1>
+          <p className={styles.heroSubtitle}>
+            Discover sitemap URLs, compare competitor topic coverage and launch priority indexing campaigns from one institutional SEO operations console.
+          </p>
+          <div className={styles.heroActions}>
+            <Link href="/sitemap-intelligence" className={styles.primaryAction}>
+              Analyze Sitemaps
+            </Link>
+            <Link href="/campaigns/new" className={styles.secondaryAction}>
+              Create Campaign
+            </Link>
+          </div>
+          <div className={styles.heroStats} aria-label="Platform highlights">
+            <span><strong>Nested XML</strong> sitemap support</span>
+            <span><strong>5</strong> competitors per scan</span>
+            <span><strong>1,000</strong> URLs per analysis</span>
+          </div>
         </div>
       </section>
 
-      {/* ── Features ─────────────────────────────────────── */}
-      <section id="features" className={styles.features}>
+      <section id="platform" className={styles.section}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <h2>Everything you need to dominate search</h2>
-            <p>A complete indexing infrastructure — from submission to monitoring.</p>
+            <p className={styles.sectionKicker}>Platform</p>
+            <h2>One console for discovery, intelligence and indexing.</h2>
+            <p>
+              The sitemaptool workflow is now integrated with IndexFlow’s campaign engine, so research can become queueable indexing work without exporting spreadsheets.
+            </p>
           </div>
 
           <div className={styles.featureGrid}>
-            {[
-              {
-                icon: '🚀',
-                title: 'Multi-Engine Submission',
-                desc: 'Simultaneously submit to Google Indexing API, IndexNow (Bing/Yandex), and direct ping protocols.',
-                color: '#6366f1',
-              },
-              {
-                icon: '🩺',
-                title: 'URL Health Scoring',
-                desc: 'Every URL gets a 9-point health check: DNS, redirects, HTTPS, robots.txt, canonical, and more.',
-                color: '#10b981',
-              },
-              {
-                icon: '🔄',
-                title: 'Smart Retry Engine',
-                desc: 'Exponential backoff with error classification. Rate limits, 5xx errors, and network failures are handled automatically.',
-                color: '#06b6d4',
-              },
-              {
-                icon: '📊',
-                title: 'Campaign Analytics',
-                desc: 'Track completion rates, queue depth, and processing speed across all your indexing campaigns.',
-                color: '#f59e0b',
-              },
-              {
-                icon: '🔑',
-                title: 'API-First Design',
-                desc: 'Full REST API with API key authentication. Integrate IndexFlow into your CMS, CI/CD, or custom workflows.',
-                color: '#8b5cf6',
-              },
-              {
-                icon: '🌐',
-                title: 'Public RSS Feeds',
-                desc: 'Automatically generated XML sitemaps and RSS feeds for every campaign and the public directory.',
-                color: '#ef4444',
-              },
-            ].map((f) => (
-              <div key={f.title} className={styles.featureCard}>
-                <div className={styles.featureIcon} style={{ background: `${f.color}18`, color: f.color }}>
-                  {f.icon}
-                </div>
-                <h3>{f.title}</h3>
-                <p>{f.desc}</p>
-              </div>
+            {platformFeatures.map((feature) => (
+              <article key={feature.title} className={styles.featureCard}>
+                <span>{feature.label}</span>
+                <h3>{feature.title}</h3>
+                <p>{feature.desc}</p>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Pricing ──────────────────────────────────────── */}
-      <section id="pricing" className={styles.pricing}>
+      <section id="workflow" className={styles.workflowSection}>
+        <div className={styles.container}>
+          <div className={styles.workflowLayout}>
+            <div>
+              <p className={styles.sectionKicker}>Workflow</p>
+              <h2>From domain to indexing campaign in one pass.</h2>
+              <p>
+                IndexFlow checks sitemap sources, filters URLs, scores competitor topic gaps and hands your own URLs to the same validation queue used by campaign imports.
+              </p>
+              <Link href="/sitemap-intelligence" className={styles.inlineAction}>
+                Open Sitemap Intelligence
+              </Link>
+            </div>
+            <ol className={styles.workflowList}>
+              {workflow.map((item, index) => (
+                <li key={item}>
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  {item}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.pricing}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <h2>Simple, transparent pricing</h2>
-            <p>Scale your indexing as you grow — no hidden fees.</p>
+            <p className={styles.sectionKicker}>Scale</p>
+            <h2>Built for serious SEO operations.</h2>
+            <p>Campaigns, queues, public feeds and sitemap intelligence are packaged for teams managing large URL portfolios.</p>
           </div>
 
-          <div className={styles.pricingGrid}>
+          <div className={styles.planGrid}>
             {[
-              {
-                name: 'Starter',
-                price: '$0',
-                period: '/ month',
-                features: ['1,000 URL submissions/mo', '1 active campaign', 'Health scoring', 'Public directory'],
-                cta: 'Get Started Free',
-                highlight: false,
-              },
-              {
-                name: 'Professional',
-                price: '$49',
-                period: '/ month',
-                features: ['50,000 URL submissions/mo', 'Unlimited campaigns', 'Priority queue', 'API access', 'RSS feeds', 'Email alerts'],
-                cta: 'Start Free Trial',
-                highlight: true,
-              },
-              {
-                name: 'Agency',
-                price: '$199',
-                period: '/ month',
-                features: ['500,000 URL submissions/mo', 'Multi-tenant clients', 'Dedicated workers', 'Webhook integrations', 'SLA guarantee', 'Priority support'],
-                cta: 'Contact Sales',
-                highlight: false,
-              },
+              { name: 'Starter', price: '$0', detail: 'Sitemap scans, health checks and small campaigns.' },
+              { name: 'Professional', price: '$49', detail: 'Priority queues, sitemap gap analysis and API access.' },
+              { name: 'Agency', price: '$199', detail: 'Large campaigns, client workflows, audit trails and webhooks.' },
             ].map((plan) => (
-              <div key={plan.name} className={`${styles.pricingCard} ${plan.highlight ? styles.pricingHighlight : ''}`}>
-                {plan.highlight && <div className={styles.pricingBadge}>Most Popular</div>}
-                <div className={styles.pricingName}>{plan.name}</div>
-                <div className={styles.pricingPrice}>
-                  {plan.price}
-                  <span>{plan.period}</span>
-                </div>
-                <ul className={styles.pricingFeatures}>
-                  {plan.features.map((f) => (
-                    <li key={f}>
-                      <span className={styles.checkmark}>✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/dashboard"
-                  className={plan.highlight ? styles.ctaPrimary : styles.ctaSecondarySmall}
-                >
-                  {plan.cta}
-                </Link>
-              </div>
+              <article key={plan.name} className={styles.planCard}>
+                <h3>{plan.name}</h3>
+                <strong>{plan.price}<span>/mo</span></strong>
+                <p>{plan.detail}</p>
+                <Link href="/dashboard">Open Dashboard</Link>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Footer ──────────────────────────────────────── */}
       <footer className={styles.footer}>
         <div className={styles.container}>
-          <div className={styles.footerContent}>
-            <div className={styles.footerBrand}>
-              <div className={styles.navLogoIcon}>⚡</div>
-              <span className={styles.navLogoText}>IndexFlow</span>
-            </div>
-            <div className={styles.footerLinks}>
-              <Link href="/directory">Directory</Link>
-              <Link href="/api/sitemap.xml">Sitemap</Link>
-              <Link href="/api/rss/newest">RSS Feed</Link>
-            </div>
-            <p className={styles.footerCopy}>© 2025 IndexFlow. All rights reserved.</p>
+          <Link href="/" className={styles.brand}>
+            <span className={styles.brandMark}>IF</span>
+            <span>IndexFlow</span>
+          </Link>
+          <div className={styles.footerLinks}>
+            <Link href="/sitemap-intelligence">Sitemap Intelligence</Link>
+            <Link href="/campaigns">Campaigns</Link>
+            <Link href="/directory">Directory</Link>
           </div>
         </div>
       </footer>

@@ -1,5 +1,6 @@
 import { validationQueue } from '../queues';
 import { processValidationPayload } from '../consumers/validation.consumer';
+import { createQueueJobId } from '../job-id';
 
 export interface ValidationJobData {
   urlId: string;
@@ -12,7 +13,7 @@ export interface ValidationJobData {
 export async function enqueueForValidation(data: ValidationJobData, options?: { delayMs?: number }): Promise<void> {
   try {
     await validationQueue.add('validate-url', data, {
-      jobId: `validate-${data.urlId}`,
+      jobId: createQueueJobId(['validate', data.urlId]),
       priority: data.userPriority,
       delay: options?.delayMs,
     });

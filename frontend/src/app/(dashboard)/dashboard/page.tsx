@@ -150,7 +150,7 @@ export default function DashboardPage() {
             </div>
             <div className={styles.configItem}>
               <span className={styles.configKey}>Delayed</span>
-              <span className={styles.configVal}>{(health?.queue as any)?.delayed ?? 0}</span>
+              <span className={styles.configVal}>{health?.queue.delayed ?? 0}</span>
             </div>
           </div>
         </Card>

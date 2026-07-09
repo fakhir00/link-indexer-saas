@@ -15,21 +15,26 @@ export default function CampaignDetailsPage({ params }: { params: Promise<{ id: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
-    try {
-      const data = await api.campaign(id);
-      setCampaign(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 5000); // Poll every 5s for real-time progress
-    return () => clearInterval(interval);
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const data = await api.campaign(id);
+        if (!cancelled) setCampaign(data);
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load campaign');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    const interval = setInterval(() => void load(), 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [id]);
 
   if (loading && !campaign) {

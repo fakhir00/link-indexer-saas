@@ -48,7 +48,7 @@ export interface SystemHealth {
   status: 'ok' | 'degraded';
   timestamp: string;
   services: { database: 'up' | 'down'; redis: 'up' | 'down' };
-  queue: { waiting: number; active: number; completed: number; failed: number; total: number };
+  queue: { waiting: number; active: number; completed: number; failed: number; delayed?: number; total: number };
 }
 
 export interface SystemDetails {
@@ -60,7 +60,7 @@ export interface SystemDetails {
   dbConnected: boolean;
   redisConnected: boolean;
   apiStatus: string;
-  queue: { waiting: number; active: number; completed: number; failed: number; total: number };
+  queue: { waiting: number; active: number; completed: number; failed: number; delayed?: number; total: number };
 }
 
 export interface DirectoryUrl {
@@ -68,6 +68,59 @@ export interface DirectoryUrl {
   link: string;
   discoveredAt: string | null;
   healthScore: number | null;
+}
+
+export interface SitemapTopic {
+  topic: string;
+  count: number;
+  urls: string[];
+}
+
+export interface SitemapSource {
+  url: string;
+  type: 'robots' | 'common' | 'nested' | 'fallback';
+  status: 'found' | 'miss' | 'error';
+  urlsFound: number;
+  error?: string;
+}
+
+export interface SitemapDiscoveryResult {
+  input: string;
+  domain: string;
+  baseUrl: string;
+  sitemapUrls: string[];
+  urls: string[];
+  contentUrls: string[];
+  indexableUrls: string[];
+  topics: SitemapTopic[];
+  sources: SitemapSource[];
+  errors: string[];
+}
+
+export interface SitemapGap {
+  topic: string;
+  score: number;
+  competitorCount: number;
+  competitorDomains: string[];
+  sampleUrls: string[];
+}
+
+export interface SitemapAnalyzeResponse {
+  success: boolean;
+  generatedAt: string;
+  contentOnly: boolean;
+  maxUrls: number;
+  own: SitemapDiscoveryResult;
+  competitors: SitemapDiscoveryResult[];
+  gaps: SitemapGap[];
+  totals: {
+    ownUrls: number;
+    ownContentUrls: number;
+    competitorUrls: number;
+    competitorContentUrls: number;
+    competitorTopics: number;
+    gaps: number;
+  };
 }
 
 // ─── API Functions ────────────────────────────────────────
@@ -88,8 +141,13 @@ export const api = {
     return apiFetch<{ campaigns: Campaign[]; total: number }>(`/campaigns${qs ? `?${qs}` : ''}`);
   },
   campaign: (id: string) => apiFetch<Campaign>(`/campaigns/${id}`),
-  createCampaign: (body: { name: string; urls: string[]; dripPerDay?: number; priority?: number }) =>
-    apiFetch<Campaign>('/campaigns', { method: 'POST', body: JSON.stringify(body) }),
+  createCampaign: async (body: { name: string; urls: string[]; dripPerDay?: number; priority?: number }) => {
+    const result = await apiFetch<{ success: boolean; campaign: Campaign }>('/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return result.campaign;
+  },
   pauseCampaign: (id: string) => apiFetch(`/campaigns/${id}/pause`, { method: 'POST' }),
   resumeCampaign: (id: string) => apiFetch(`/campaigns/${id}/resume`, { method: 'POST' }),
 
@@ -105,6 +163,14 @@ export const api = {
   },
   retryUrl: (id: string) => apiFetch(`/urls/${id}/retry`, { method: 'POST' }),
   retryAllFailed: () => apiFetch('/urls/retry-failed', { method: 'POST' }),
+  retryAllStuck: () => apiFetch<{ success: boolean; retried: number }>('/urls/retry-stuck', { method: 'POST' }),
+
+  // Sitemap intelligence
+  sitemapAnalyze: (body: { ownDomain: string; competitorDomains: string[]; maxUrls?: number; contentOnly?: boolean }) =>
+    apiFetch<SitemapAnalyzeResponse>('/tools/sitemap/analyze', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 
   // Public directory
   directory: (params?: { page?: number; limit?: number }) => {
