@@ -78,4 +78,30 @@ export const urlService = {
 
     return failedUrls.length;
   },
+
+  async retryAllStuck() {
+    const stuckUrls = await urlRepository.findAllStuck();
+    if (stuckUrls.length === 0) {
+      return 0;
+    }
+
+    const ids = stuckUrls.map((u) => u.id);
+    const campaignIds = Array.from(new Set(stuckUrls.map((u) => u.campaignId)));
+
+    await urlRepository.bulkResetForRetry(ids, campaignIds);
+
+    await Promise.all(
+      stuckUrls.map((url) =>
+        enqueueForValidation({
+          urlId: url.id,
+          link: url.link,
+          campaignId: url.campaignId,
+          userPriority: url.priority ?? 5,
+          enqueueForIndexingAfter: true,
+        })
+      )
+    );
+
+    return stuckUrls.length;
+  },
 };
