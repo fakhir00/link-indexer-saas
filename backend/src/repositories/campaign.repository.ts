@@ -29,7 +29,16 @@ export const campaignRepository = {
         completedUrls: 0,
         failedUrls: 0,
         urls: {
-          create: data.urls.map((link) => ({ link, status: 'queued', priority: data.priority ?? 5 })),
+          create: data.urls.map((link, index) => {
+            const dayOffset = Math.floor(index / data.dripPerDay);
+            const delayMs = dayOffset * 24 * 60 * 60 * 1000;
+            return {
+              link,
+              status: 'queued',
+              priority: data.priority ?? 5,
+              scheduledAt: new Date(Date.now() + delayMs),
+            };
+          }),
         },
       },
       include: { urls: true },

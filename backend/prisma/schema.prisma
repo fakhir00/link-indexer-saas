@@ -124,6 +124,7 @@ model Url {
   retryCount    Int       @default(0)
   maxRetries    Int       @default(3)
   nextRetryAt   DateTime?
+  scheduledAt   DateTime?
   errorClass    String?   // rate_limit, server_error, not_found, dns_error, network, ssl
 
   // Outcome

@@ -149,6 +149,7 @@ async function processIndexingJob(job: Job): Promise<void> {
           errorMessage: message,
           errorClass: decision.errorClass,
           nextRetryAt: new Date(Date.now() + decision.delayMs),
+          scheduledAt: new Date(Date.now() + decision.delayMs),
         },
       });
 

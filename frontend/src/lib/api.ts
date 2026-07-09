@@ -26,6 +26,7 @@ export interface Campaign {
   priority: number;
   createdAt: string;
   updatedAt: string;
+  urls?: Url[];
 }
 
 export interface Url {
@@ -37,6 +38,8 @@ export interface Url {
   retryCount: number;
   errorMessage: string | null;
   strategy: string | null;
+  validationStatus: string | null;
+  scheduledAt: string | null;
   createdAt: string;
   campaign?: { id: string; name: string; status: string };
 }

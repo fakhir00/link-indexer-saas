@@ -1,4 +1,5 @@
 import { campaignRepository } from '../repositories';
+import { prisma } from '../prisma';
 import { HttpError } from '../utils';
 import { enqueueForValidation } from '../queue/producers/validation.producer';
 import { uniqueNormalizedUrls } from '../utils';
@@ -30,6 +31,32 @@ export const campaignService = {
         progress,
       };
     });
+  },
+
+  async getById(id: string) {
+    const campaign = await campaignRepository.findById(id);
+    if (!campaign) {
+      throw new HttpError(404, 'Campaign not found');
+    }
+    
+    const urls = await prisma.url.findMany({
+      where: { campaignId: id },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+    });
+
+    const completedUrls = urls.filter((u) => u.status === 'completed').length;
+    const failedUrls = urls.filter((u) => u.status === 'failed').length;
+    const totalUrls = urls.length;
+    const progress = totalUrls > 0 ? Math.round((completedUrls / totalUrls) * 100) : 0;
+
+    return {
+      ...campaign,
+      totalUrls,
+      completedUrls,
+      failedUrls,
+      progress,
+      urls,
+    };
   },
 
   async create(input: { name: string; urls: string[]; dripPerDay?: number; priority?: number; tags?: string[] }) {

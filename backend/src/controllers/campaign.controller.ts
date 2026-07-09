@@ -9,6 +9,11 @@ export const campaignController = {
     res.json(campaigns);
   },
 
+  async getById(req: Request, res: Response) {
+    const campaign = await campaignService.getById(String(req.params.id));
+    res.json(campaign);
+  },
+
   async create(req: Request, res: Response) {
     const input = parseOrThrow(createCampaignSchema, req.body);
     const campaign = await campaignService.create(input);
