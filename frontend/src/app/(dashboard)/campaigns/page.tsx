@@ -11,12 +11,16 @@ import styles from './page.module.css';
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   async function load() {
     try {
+      setError(null);
       const res = await api.campaigns({ limit: 50 });
       setCampaigns(res.campaigns ?? []);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load campaigns');
     } finally {
       setLoading(false);
     }
@@ -50,7 +54,14 @@ export default function CampaignsPage() {
         </Link>
       </div>
 
-      {loading ? (
+      {error ? (
+        <Card className={styles.emptyState}>
+          <div className={styles.emptyIcon} style={{ color: 'var(--danger)' }}>⚠️</div>
+          <h3>Failed to load campaigns</h3>
+          <p style={{ color: 'var(--danger)' }}>{error}</p>
+          <Button onClick={load}>Try Again</Button>
+        </Card>
+      ) : loading ? (
         <div className={styles.grid}>
           {[1,2,3].map(i => (
             <div key={i} className="skeleton" style={{ height: 200, borderRadius: 16 }} />
