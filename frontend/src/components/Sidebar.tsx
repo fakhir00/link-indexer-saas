@@ -7,7 +7,6 @@ import styles from './Sidebar.module.css';
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '⚡' },
   { href: '/campaigns', label: 'Campaigns', icon: '🎯' },
-  { href: '/sitemap-intelligence', label: 'Sitemap Intel', icon: '⌁' },
   { href: '/directory', label: 'Directory', icon: '🌐' },
   { href: '/analytics', label: 'Analytics', icon: '📊' },
 ];
