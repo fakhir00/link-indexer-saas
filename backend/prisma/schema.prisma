@@ -133,6 +133,10 @@ model Url {
   lastAttemptAt DateTime?
   discoveredAt  DateTime?
 
+  // Verification
+  isIndexed        Boolean   @default(false)
+  lastIndexCheckAt DateTime?
+
   // Health scoring (0-100 each)
   healthScore       Int?
   technicalScore    Int?

@@ -11,6 +11,7 @@ export const QUEUE_NAMES = {
   RETRY:    'indexing-retry',
   DLQ:      'indexing-dlq',
   VALIDATION: 'url-validation',
+  VERIFICATION: 'index-verification',
 } as const;
 
 export type QueueName = typeof QUEUE_NAMES[keyof typeof QUEUE_NAMES];
@@ -32,6 +33,7 @@ export const lowQueue        = makeQueue(QUEUE_NAMES.LOW);
 export const retryQueue      = makeQueue(QUEUE_NAMES.RETRY);
 export const dlqQueue        = makeQueue(QUEUE_NAMES.DLQ);
 export const validationQueue = makeQueue(QUEUE_NAMES.VALIDATION);
+export const verificationQueue = makeQueue(QUEUE_NAMES.VERIFICATION);
 
 // Map campaign priority (1-10) to the right queue
 export function getQueueForPriority(priority: number) {

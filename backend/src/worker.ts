@@ -4,9 +4,11 @@
  */
 import { startIndexingWorkers } from './queue/consumers/indexing.consumer';
 import { startValidationWorker } from './queue/consumers/validation.consumer';
+import { startVerificationWorker } from './queue/consumers/verification.consumer';
 
 export const indexingWorkers = startIndexingWorkers();
 export const validationWorker = startValidationWorker();
+export const verificationWorker = startVerificationWorker();
 
 // Backwards-compat export
 export const worker = indexingWorkers[0];

@@ -59,8 +59,8 @@ const corsOptions = {
 };
 app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json({ limit: '2mb' }));
-// Mount all routes
-app.use('/', routes_1.default);
+// Mount all routes under /api
+app.use('/api', routes_1.default);
 // 404 handler
 app.use((_req, res) => {
     res.status(404).json({ error: 'Route not found' });

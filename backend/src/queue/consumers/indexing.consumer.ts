@@ -11,6 +11,7 @@ import {
   mediumQueue,
   lowQueue,
   retryQueue,
+  verificationQueue,
 } from '../queues';
 
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 5);
@@ -119,6 +120,16 @@ async function processIndexingJob(job: Job): Promise<void> {
 
     await prisma.urlTimeline.create({
       data: { urlId, event: 'completed', detail: `via ${strategiesUsed}` },
+    });
+
+    // Enqueue verification job (add 5 minute delay to let Google process)
+    await verificationQueue.add('verify-index', {
+      urlId,
+      link,
+      attemptNumber: 0
+    }, {
+      delay: 5 * 60 * 1000,
+      jobId: `verify-${urlId}`
     });
 
     await refreshCampaignStatus(urlRecord.campaign.id);

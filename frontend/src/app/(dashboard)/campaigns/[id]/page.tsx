@@ -80,7 +80,7 @@ export default function CampaignDetailsPage({ params }: { params: Promise<{ id: 
           <span className={styles.statValue}>{campaign.totalUrls}</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>Completed</span>
+          <span className={styles.statLabel}>Pinged</span>
           <span className={`${styles.statValue} ${styles.success}`}>{campaign.completedUrls}</span>
         </div>
         <div className={styles.statCard}>
@@ -108,7 +108,8 @@ export default function CampaignDetailsPage({ params }: { params: Promise<{ id: 
               <thead>
                 <tr>
                   <th>URL</th>
-                  <th>Status</th>
+                  <th>Ping Status</th>
+                  <th>Google Index</th>
                   <th>Estimated Time</th>
                 </tr>
               </thead>
@@ -141,11 +142,20 @@ export default function CampaignDetailsPage({ params }: { params: Promise<{ id: 
                       </td>
                       <td>
                         <div className={styles.statusCell}>
-                          <StatusBadge status={checkpointStatus} />
+                          <StatusBadge status={checkpointStatus === 'completed' ? 'pinged' : checkpointStatus} />
                           {url.errorMessage && (
                             <div className={styles.errorText}>{url.errorMessage}</div>
                           )}
                         </div>
+                      </td>
+                      <td>
+                        {url.isIndexed ? (
+                          <span style={{ color: 'var(--brand-success)', fontWeight: 500 }}>✅ Indexed</span>
+                        ) : url.lastIndexCheckAt ? (
+                          <span style={{ color: 'var(--brand-warning)', fontWeight: 500 }}>⏳ Not Indexed</span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>Checking...</span>
+                        )}
                       </td>
                       <td className={styles.timeCell}>{estimatedTimeDisplay}</td>
                     </tr>

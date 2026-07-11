@@ -9,7 +9,7 @@ export const directoryService = {
         orderBy: { discoveredAt: 'desc' },
         take: limit,
         skip: offset,
-        select: { id: true, link: true, discoveredAt: true, healthScore: true },
+        select: { id: true, link: true, discoveredAt: true, healthScore: true, isIndexed: true, lastIndexCheckAt: true },
       }),
       prisma.url.count({ where: { status: 'completed' } }),
     ]);
@@ -32,7 +32,7 @@ export const directoryService = {
       },
       orderBy: { discoveredAt: 'desc' },
       take: 100,
-      select: { id: true, link: true, discoveredAt: true, healthScore: true },
+      select: { id: true, link: true, discoveredAt: true, healthScore: true, isIndexed: true, lastIndexCheckAt: true },
     });
   },
 
@@ -42,7 +42,7 @@ export const directoryService = {
       where: { status: 'completed' },
       orderBy: { healthScore: 'desc' },
       take: 50,
-      select: { id: true, link: true, discoveredAt: true, healthScore: true },
+      select: { id: true, link: true, discoveredAt: true, healthScore: true, isIndexed: true, lastIndexCheckAt: true },
     });
   },
 
@@ -56,7 +56,7 @@ export const directoryService = {
         },
       },
       orderBy: { discoveredAt: 'desc' },
-      select: { id: true, link: true, discoveredAt: true },
+      select: { id: true, link: true, discoveredAt: true, isIndexed: true, lastIndexCheckAt: true },
     });
   },
 
@@ -69,7 +69,7 @@ export const directoryService = {
       },
       orderBy: { discoveredAt: 'desc' },
       take: 50,
-      select: { id: true, link: true, discoveredAt: true },
+      select: { id: true, link: true, discoveredAt: true, isIndexed: true, lastIndexCheckAt: true },
     });
   },
 };

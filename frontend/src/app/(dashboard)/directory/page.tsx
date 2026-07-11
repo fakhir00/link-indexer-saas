@@ -44,7 +44,7 @@ export default function DirectoryPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Public Directory</h1>
-          <p className={styles.subtitle}>{total.toLocaleString()} successfully indexed URLs</p>
+          <p className={styles.subtitle}>{total.toLocaleString()} successfully pinged URLs</p>
         </div>
         <div className={styles.feedLinks}>
           <a href="/api/rss/newest" target="_blank" className={styles.feedBadge}>
@@ -62,7 +62,8 @@ export default function DirectoryPage() {
           <span>URL</span>
           <span>Domain</span>
           <span>Health</span>
-          <span>Indexed</span>
+          <span>Pinged On</span>
+          <span>Index Status</span>
         </div>
 
         {loading ? (
@@ -106,6 +107,15 @@ export default function DirectoryPage() {
               <span className={styles.date}>
                 {u.discoveredAt ? new Date(u.discoveredAt).toLocaleDateString() : '—'}
               </span>
+              <div className={styles.indexedCell}>
+                {u.isIndexed ? (
+                  <span style={{ color: 'var(--brand-success)', fontSize: '0.9rem', fontWeight: 500 }}>✅ Indexed</span>
+                ) : u.lastIndexCheckAt ? (
+                  <span style={{ color: 'var(--brand-warning)', fontSize: '0.9rem', fontWeight: 500 }}>⏳ Not Indexed</span>
+                ) : (
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Checking...</span>
+                )}
+              </div>
             </a>
           ))
         )}

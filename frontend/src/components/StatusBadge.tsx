@@ -5,6 +5,7 @@ interface StatusBadgeProps {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   completed: { label: 'Completed', color: '#10b981', bg: 'rgba(16,185,129,0.12)', dot: '#10b981' },
+  pinged:    { label: 'Pinged',    color: '#10b981', bg: 'rgba(16,185,129,0.12)', dot: '#10b981' },
   failed:    { label: 'Failed',    color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   dot: '#ef4444' },
   queued:    { label: 'Queued',    color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  dot: '#f59e0b' },
   processing:{ label: 'Processing',color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',   dot: '#06b6d4' },

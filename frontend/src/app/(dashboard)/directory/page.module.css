@@ -43,7 +43,7 @@
 /* Table */
 .tableHead {
   display: grid;
-  grid-template-columns: 3fr 1.5fr 1.5fr 1fr;
+  grid-template-columns: 2.5fr 1.5fr 1.5fr 1fr 1fr;
   padding: 10px 24px;
   font-size: 11px;
   font-weight: 600;
@@ -55,7 +55,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 3fr 1.5fr 1.5fr 1fr;
+  grid-template-columns: 2.5fr 1.5fr 1.5fr 1fr 1fr;
   align-items: center;
   padding: 12px 24px;
   border-bottom: 1px solid var(--border-subtle);

@@ -45,6 +45,8 @@ export interface Url {
   strategy: string | null;
   validationStatus: string | null;
   scheduledAt: string | null;
+  isIndexed: boolean;
+  lastIndexCheckAt: string | null;
   createdAt: string;
   campaign?: { id: string; name: string; status: string };
 }
@@ -73,6 +75,8 @@ export interface DirectoryUrl {
   link: string;
   discoveredAt: string | null;
   healthScore: number | null;
+  isIndexed: boolean;
+  lastIndexCheckAt: string | null;
 }
 
 export interface SitemapTopic {
