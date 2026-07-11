@@ -48,14 +48,18 @@ export async function getAllQueueSnapshots() {
   const queues = [criticalQueue, highQueue, mediumQueue, lowQueue, retryQueue, dlqQueue, validationQueue];
   const results = await Promise.all(
     queues.map(async (q) => {
-      const [waiting, active, failed, delayed, completed] = await Promise.all([
-        q.getWaitingCount(),
-        q.getActiveCount(),
-        q.getFailedCount(),
-        q.getDelayedCount(),
-        q.getCompletedCount(),
-      ]);
-      return { name: q.name, waiting, active, failed, delayed, completed, total: waiting + active + delayed };
+      try {
+        const [waiting, active, failed, delayed, completed] = await Promise.all([
+          q.getWaitingCount(),
+          q.getActiveCount(),
+          q.getFailedCount(),
+          q.getDelayedCount(),
+          q.getCompletedCount(),
+        ]);
+        return { name: q.name, waiting, active, failed, delayed, completed, total: waiting + active + delayed };
+      } catch (err) {
+        return { name: q.name, waiting: 0, active: 0, failed: 0, delayed: 0, completed: 0, total: 0 };
+      }
     }),
   );
   return results;

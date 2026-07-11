@@ -61,7 +61,7 @@ export const systemService = {
 
   async getSystemDetails() {
     const [queueSnapshots, dbStatus, redisStatus] = await Promise.all([
-      getAllQueueSnapshots(),
+      getAllQueueSnapshots().catch(() => []),
       prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false),
       connection.ping().then((v) => v === 'PONG').catch(() => false),
     ]);
