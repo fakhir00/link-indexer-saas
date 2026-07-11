@@ -113,6 +113,15 @@ app.include_router(scan_router)
 app.include_router(keywords_router)
 app.include_router(keyword_bank_router)
 
+# Serve the compiled Vite dashboard frontend
+import os
+from fastapi.staticfiles import StaticFiles
+
+static_dir = os.path.join(os.path.dirname(__file__), "..", "dashboard", "dist")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="dashboard")
+
+
 
 @app.get("/api/health")
 async def health():

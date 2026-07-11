@@ -1,5 +1,11 @@
-FROM python:3.11-slim
+FROM node:20-slim AS frontend-builder
+WORKDIR /app
+COPY dashboard/package*.json ./
+RUN npm ci
+COPY dashboard/ ./
+RUN npm run build
 
+FROM python:3.11-slim
 WORKDIR /app
 
 # System deps for spaCy, lxml, psycopg2
@@ -14,6 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -m spacy download en_core_web_sm
 
 COPY . .
+# Copy built dashboard from the Node builder
+COPY --from=frontend-builder /app/dist ./dashboard/dist
 
 EXPOSE 8000
 
