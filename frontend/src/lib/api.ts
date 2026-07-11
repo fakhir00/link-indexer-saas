@@ -1,4 +1,4 @@
-let BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+let BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api').trim();
 // Remove any trailing slashes first
 BASE = BASE.replace(/\/+$/, '');
 // Automatically append /api if it doesn't end with it and isn't localhost
