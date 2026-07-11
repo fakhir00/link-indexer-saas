@@ -26,8 +26,8 @@ const corsOptions: CorsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 
-// Mount all routes
-app.use('/', routes);
+// Mount all routes under /api
+app.use('/api', routes);
 
 // 404 handler
 app.use((_req, res) => {
