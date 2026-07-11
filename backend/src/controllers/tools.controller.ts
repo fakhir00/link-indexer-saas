@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { indexVerificationService, sitemapIntelligenceService, toolsService } from '../services';
+import { indexVerificationService, toolsService } from '../services';
 import { parseOrThrow } from '../middleware';
-import { toolsGoogleIndexSchema, toolsSitemapAnalyzeSchema, toolsVerifyIndexSchema } from '../validators';
+import { toolsGoogleIndexSchema, toolsVerifyIndexSchema } from '../validators';
 
 export const toolsController = {
   async googleIndex(req: Request, res: Response) {
@@ -13,12 +13,6 @@ export const toolsController = {
   async verifyIndex(req: Request, res: Response) {
     const { urls, provider } = parseOrThrow(toolsVerifyIndexSchema, req.body);
     const result = await indexVerificationService.verify(urls, provider);
-    res.json({ success: true, ...result });
-  },
-
-  async sitemapAnalyze(req: Request, res: Response) {
-    const input = parseOrThrow(toolsSitemapAnalyzeSchema, req.body);
-    const result = await sitemapIntelligenceService.analyze(input);
     res.json({ success: true, ...result });
   },
 };
