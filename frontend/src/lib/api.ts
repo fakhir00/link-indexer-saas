@@ -133,7 +133,7 @@ export const api = {
   health: () => apiFetch<SystemHealth>('/health'),
 
   // System
-  systemDetails: () => apiFetch<SystemDetails>('/system/details'),
+  systemDetails: () => apiFetch<SystemDetails>('/system'),
 
   // Campaigns
   campaigns: (params?: { page?: number; limit?: number }) => {
