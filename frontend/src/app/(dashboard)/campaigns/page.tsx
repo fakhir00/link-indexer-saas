@@ -14,7 +14,25 @@ export default function CampaignsPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  useEffect(() => {
+    let mounted = true;
+    async function fetchCampaigns() {
+      try {
+        if (mounted) setError(null);
+        const res = await api.campaigns({ limit: 50 });
+        if (mounted) setCampaigns(res.campaigns ?? []);
+      } catch (e) {
+        if (mounted) setError(e instanceof Error ? e.message : 'Failed to load campaigns');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    fetchCampaigns();
+    return () => { mounted = false; };
+  }, []);
+
   async function load() {
+    setLoading(true);
     try {
       setError(null);
       const res = await api.campaigns({ limit: 50 });
@@ -25,8 +43,6 @@ export default function CampaignsPage() {
       setLoading(false);
     }
   }
-
-  useEffect(() => { load(); }, []);
 
   async function handlePause(id: string) {
     setActionLoading(id);
