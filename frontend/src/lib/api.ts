@@ -1,7 +1,9 @@
 let BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
-// Automatically append /api to the base URL if it's missing (e.g., in production)
-if (BASE && !BASE.endsWith('/api') && !BASE.includes('localhost')) {
-  BASE = `${BASE.replace(/\/$/, '')}/api`;
+// Remove any trailing slashes first
+BASE = BASE.replace(/\/+$/, '');
+// Automatically append /api if it doesn't end with it and isn't localhost
+if (!BASE.endsWith('/api') && !BASE.includes('localhost')) {
+  BASE = `${BASE}/api`;
 }
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
