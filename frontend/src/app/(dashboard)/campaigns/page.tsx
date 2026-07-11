@@ -11,38 +11,18 @@ import styles from './page.module.css';
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    async function fetchCampaigns() {
-      try {
-        if (mounted) setError(null);
-        const res = await api.campaigns({ limit: 50 });
-        if (mounted) setCampaigns(res.campaigns ?? []);
-      } catch (e) {
-        if (mounted) setError(e instanceof Error ? e.message : 'Failed to load campaigns');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    fetchCampaigns();
-    return () => { mounted = false; };
-  }, []);
-
   async function load() {
-    setLoading(true);
     try {
-      setError(null);
       const res = await api.campaigns({ limit: 50 });
       setCampaigns(res.campaigns ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load campaigns');
     } finally {
       setLoading(false);
     }
   }
+
+  useEffect(() => { load(); }, []);
 
   async function handlePause(id: string) {
     setActionLoading(id);
@@ -70,14 +50,7 @@ export default function CampaignsPage() {
         </Link>
       </div>
 
-      {error ? (
-        <Card className={styles.emptyState}>
-          <div className={styles.emptyIcon}>⚠️</div>
-          <h3>Could not load campaigns</h3>
-          <p>{error}</p>
-          <Button onClick={() => { setLoading(true); load(); }}>Retry</Button>
-        </Card>
-      ) : loading ? (
+      {loading ? (
         <div className={styles.grid}>
           {[1,2,3].map(i => (
             <div key={i} className="skeleton" style={{ height: 200, borderRadius: 16 }} />

@@ -117,18 +117,3 @@ app.include_router(keyword_bank_router)
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "SiteMapSEO API"}
-
-import os
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
-if os.path.exists("static"):
-    app.mount("/sitemap-projects/assets", StaticFiles(directory="static/assets"), name="assets")
-    
-    @app.get("/sitemap-projects/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        return FileResponse("static/index.html")
-    
-    @app.get("/sitemap-projects")
-    async def serve_frontend_root():
-        return FileResponse("static/index.html")

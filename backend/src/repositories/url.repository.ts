@@ -101,18 +101,6 @@ export const urlRepository = {
     });
   },
 
-  findAllStuck() {
-    // URLs stuck in 'queued' or 'processing' for more than 5 minutes
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return prisma.url.findMany({
-      where: {
-        status: { in: ['queued', 'processing'] },
-        updatedAt: { lt: fiveMinutesAgo },
-      },
-      select: { id: true, link: true, campaignId: true, priority: true },
-    });
-  },
-
   bulkResetForRetry(ids: string[], campaignIds: string[]) {
     return prisma.$transaction([
       prisma.url.updateMany({

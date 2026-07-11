@@ -24,9 +24,4 @@ export const urlController = {
     const retried = await urlService.retryAllFailed();
     res.json({ success: true, retried });
   },
-
-  async retryAllStuck(_req: Request, res: Response) {
-    const retried = await urlService.retryAllStuck();
-    res.json({ success: true, retried });
-  },
 };

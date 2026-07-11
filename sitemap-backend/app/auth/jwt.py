@@ -45,13 +45,31 @@ def create_access_token(user_id: uuid.UUID) -> str:
 
 
 async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    result = await db.execute(select(User).limit(1))
+    auth_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing authentication token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    if not credentials:
+        raise auth_error
+
+    try:
+        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        subject = payload.get("sub")
+        if not subject:
+            raise auth_error
+        user_id = uuid.UUID(subject)
+    except (JWTError, ValueError):
+        raise auth_error
+
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        user = User(email="admin@example.com")
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        raise auth_error
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
     return user

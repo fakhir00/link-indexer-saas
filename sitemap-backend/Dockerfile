@@ -1,13 +1,5 @@
-# Build frontend
-FROM node:20-alpine AS frontend-builder
-WORKDIR /app
-COPY dashboard/package*.json ./
-RUN npm ci
-COPY dashboard/ ./
-RUN npm run build
-
-# Build backend
 FROM python:3.11-slim
+
 WORKDIR /app
 
 # System deps for spaCy, lxml, psycopg2
@@ -22,8 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -m spacy download en_core_web_sm
 
 COPY . .
-# Copy frontend build
-COPY --from=frontend-builder /app/dist ./static
 
 EXPOSE 8000
 

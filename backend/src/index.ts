@@ -26,11 +26,8 @@ const corsOptions: CorsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 
-// Mount all routes under /api
-app.use('/api', routes);
-
-// Root health check (for Render's health check pings)
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+// Mount all routes
+app.use('/', routes);
 
 // 404 handler
 app.use((_req, res) => {
