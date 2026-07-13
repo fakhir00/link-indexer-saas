@@ -47,13 +47,7 @@ async function processVerificationJob(job: Job<VerificationJobData>): Promise<vo
 export function startVerificationWorker() {
   const worker = new Worker(QUEUE_NAMES.VERIFICATION, processVerificationJob, {
     connection,
-    concurrency: CONCURRENCY,
-    // Use exponential backoff for retries to avoid hammering Google
-    settings: {
-      backoffStrategy: (attemptsMade: number) => {
-        return Math.pow(2, attemptsMade) * 60000; // 1m, 2m, 4m, 8m...
-      }
-    }
+    concurrency: CONCURRENCY
   });
 
   worker.on('ready', () => console.log(`[Worker] Listening on ${QUEUE_NAMES.VERIFICATION}`));
