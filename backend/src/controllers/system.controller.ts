@@ -15,7 +15,7 @@ export const systemController = {
         where: {
           isIndexed: false,
           lastIndexCheckAt: null,
-          validationStatus: 'completed'
+          status: 'completed'
         }
       });
 
