@@ -140,6 +140,7 @@ export const api = {
 
   // System
   systemDetails: () => apiFetch<SystemDetails>('/system'),
+  enqueueOld: () => apiFetch<{ message: string }>('/system/enqueue-old'),
 
   // Campaigns
   campaigns: (params?: { page?: number; limit?: number }) => {

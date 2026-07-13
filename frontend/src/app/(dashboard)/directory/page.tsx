@@ -46,13 +46,28 @@ export default function DirectoryPage() {
           <h1 className={styles.title}>Public Directory</h1>
           <p className={styles.subtitle}>{total.toLocaleString()} successfully pinged URLs</p>
         </div>
-        <div className={styles.feedLinks}>
-          <a href="/api/rss/newest" target="_blank" className={styles.feedBadge}>
-            RSS Feed
-          </a>
-          <a href="/api/sitemap.xml" target="_blank" className={styles.feedBadge}>
-            Sitemap
-          </a>
+        <div className={styles.headerActions}>
+          <Button 
+            variant="outline" 
+            onClick={async () => {
+              try {
+                const res = await api.enqueueOld();
+                alert(res.message);
+              } catch (e: any) {
+                alert(e.message);
+              }
+            }}
+          >
+            Force Re-check Index
+          </Button>
+          <div className={styles.feedLinks}>
+            <a href="/api/rss/newest" target="_blank" className={styles.feedBadge}>
+              RSS Feed
+            </a>
+            <a href="/api/sitemap.xml" target="_blank" className={styles.feedBadge}>
+              Sitemap
+            </a>
+          </div>
         </div>
       </div>
 
