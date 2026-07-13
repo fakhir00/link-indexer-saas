@@ -38,12 +38,9 @@ async function processVerificationJob(job: Job<VerificationJobData>): Promise<vo
 
   } catch (error: any) {
     console.error(`[VerificationWorker] Error verifying ${link}: ${error.message}`);
-    // If it's a captcha or rate limit, we might want to throw to let BullMQ retry,
-    // but we need exponential backoff.
-    if (error.message.includes('CAPTCHA') || error.message.includes('rate limit')) {
-      // Re-throw to retry
-      throw error;
-    }
+    // Unconditionally throw the error so BullMQ knows the job failed and can retry it.
+    // If we swallow it, the DB never gets updated and it gets stuck on "Checking..."
+    throw error;
   }
 }
 
