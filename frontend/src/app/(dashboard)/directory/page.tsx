@@ -49,7 +49,7 @@ export default function DirectoryPage() {
         </div>
         <div className={styles.headerActions}>
           <Button 
-            variant="outline" 
+            variant="secondary" 
             onClick={async () => {
               try {
                 const res = await api.enqueueOld();
