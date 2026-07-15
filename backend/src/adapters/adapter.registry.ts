@@ -3,6 +3,8 @@ import { PingAdapter } from './ping.adapter';
 import { IndexNowAdapter } from './indexnow.adapter';
 import { GoogleAdapter } from './google.adapter';
 import { DryRunAdapter } from './dry-run.adapter';
+import { SitemapAdapter } from './sitemap.adapter';
+import { ShortenerAdapter } from './shortener.adapter';
 
 export class AdapterRegistry {
   private adapters: IndexingAdapter[] = [];
@@ -16,6 +18,8 @@ export class AdapterRegistry {
       new PingAdapter(),
       new IndexNowAdapter(),
       new GoogleAdapter(),
+      new SitemapAdapter(),
+      new ShortenerAdapter(),
     ];
 
     for (const adapter of builtIn) {
