@@ -1,11 +1,12 @@
 import { google } from 'googleapis';
 import * as fs from 'fs';
 import * as path from 'path';
-import { IndexingAdapter, AdapterType, AdapterResult, SubmissionContext } from './adapter.interface';
+import { IndexingAdapter, AdapterType, AdapterTier, AdapterResult, SubmissionContext } from './adapter.interface';
 
 export class GoogleAdapter implements IndexingAdapter {
   readonly name = 'Google Indexing API';
   readonly type: AdapterType = 'api';
+  readonly tier: AdapterTier = 'primary';
   
   private jwtClient: any;
   private indexing: any;
@@ -32,9 +33,12 @@ export class GoogleAdapter implements IndexingAdapter {
           auth: this.jwtClient,
         });
         this.configured = true;
+        console.log(`[GoogleAdapter] Configured with service account: ${credentials.client_email}`);
       } catch (err) {
-        console.error('Failed to load Google Indexing API credentials:', err);
+        console.error('[GoogleAdapter] Failed to load Google Indexing API credentials:', err);
       }
+    } else {
+      console.log('[GoogleAdapter] No google-credentials.json found — adapter disabled');
     }
   }
 
@@ -54,10 +58,22 @@ export class GoogleAdapter implements IndexingAdapter {
       return {
         adapter: this.name,
         success: true,
+        tier: this.tier,
         detail: `Submitted to Google (Status: ${response.status})`,
       };
     } catch (error: any) {
-      throw new Error(`Google Indexing API failed: ${error.message || error.toString()}`);
+      const status = error?.code || error?.response?.status;
+      const message = error.message || error.toString();
+      // Provide actionable error messages
+      if (status === 403) {
+        throw new Error(
+          `Google Indexing API 403: Service account lacks permission. ` +
+          `Ensure the service account is added as an Owner in Google Search Console for the target site. ` +
+          `Note: This API only works for JobPosting and BroadcastEvent pages. Original: ${message}`
+        );
+      }
+      throw new Error(`Google Indexing API failed (${status || 'unknown'}): ${message}`);
     }
   }
 }
+

@@ -1,4 +1,4 @@
-import { IndexingAdapter, AdapterType, AdapterResult, SubmissionContext } from './adapter.interface';
+import { IndexingAdapter, AdapterType, AdapterTier, AdapterResult, SubmissionContext } from './adapter.interface';
 
 async function fetchJson(endpoint: string, timeoutMs: number) {
   const controller = new AbortController();
@@ -24,6 +24,7 @@ async function pingUrl(url: string, timeoutMs: number) {
 export class ShortenerAdapter implements IndexingAdapter {
   readonly name = 'Shortener Bounce';
   readonly type: AdapterType = 'api';
+  readonly tier: AdapterTier = 'supplementary';
   private timeoutMs: number;
 
   constructor() {
@@ -60,10 +61,12 @@ export class ShortenerAdapter implements IndexingAdapter {
       return {
         adapter: this.name,
         success: true,
-        detail: `Created shortlink: ${shortUrl}`,
+        tier: this.tier,
+        detail: `Created shortlink: ${shortUrl} (supplementary — does not directly signal search engines)`,
       };
     } catch (error: any) {
       throw new Error(`Shortener Bounce failed: ${error.message || 'Unknown error'}`);
     }
   }
 }
+

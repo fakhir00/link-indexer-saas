@@ -88,7 +88,10 @@ async function processIndexingJob(job: Job): Promise<void> {
   try {
     const results = await adapterRegistry.submitUrl(link, { campaignId: urlRecord.campaign.id });
     const durationMs = Date.now() - startedAt;
-    const strategiesUsed = results.map((r) => r.adapter).join(', ');
+    const primaryResults = results.filter(r => r.tier === 'primary');
+    const supplementaryResults = results.filter(r => r.tier === 'supplementary');
+    const strategiesUsed = primaryResults.map((r) => r.adapter).join(', ');
+    const supplementaryUsed = supplementaryResults.map((r) => r.adapter).join(', ');
 
     // Log each submission
     await prisma.$transaction(
@@ -119,7 +122,11 @@ async function processIndexingJob(job: Job): Promise<void> {
     });
 
     await prisma.urlTimeline.create({
-      data: { urlId, event: 'completed', detail: `via ${strategiesUsed}` },
+      data: {
+        urlId,
+        event: 'completed',
+        detail: `via ${strategiesUsed}${supplementaryUsed ? ` (also: ${supplementaryUsed})` : ''}`,
+      },
     });
 
     // Enqueue verification job (add 5 minute delay to let Google process)

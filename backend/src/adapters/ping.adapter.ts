@@ -1,4 +1,4 @@
-import { IndexingAdapter, AdapterType, AdapterResult, SubmissionContext } from './adapter.interface';
+import { IndexingAdapter, AdapterType, AdapterTier, AdapterResult, SubmissionContext } from './adapter.interface';
 
 function get(endpoint: string, timeoutMs: number) {
   const controller = new AbortController();
@@ -30,6 +30,7 @@ function csv(value?: string) {
 export class PingAdapter implements IndexingAdapter {
   readonly name = 'Ping';
   readonly type: AdapterType = 'ping';
+  readonly tier: AdapterTier = 'primary';
   private endpoints: string[] = [];
   private timeoutMs: number;
 
@@ -59,6 +60,7 @@ export class PingAdapter implements IndexingAdapter {
         return {
           adapter: this.name,
           success: true,
+          tier: this.tier,
           detail: `Accepted by ${new URL(endpoint).host}`,
         };
       } catch (error) {
@@ -69,3 +71,4 @@ export class PingAdapter implements IndexingAdapter {
     throw new Error(`Ping adapter failed: ${failures.join('; ')}`);
   }
 }
+

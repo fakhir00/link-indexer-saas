@@ -7,7 +7,10 @@ export async function checkIndexStatus(url: string): Promise<boolean> {
   // We'll search for 'site:domain/path'
   const query = `site:${domain}${targetUrl.pathname}${targetUrl.search}`;
 
-  const serperApiKey = process.env.SERPER_API_KEY || 'e11d107b3ded4011fb8a76e2cbb6da1d880ce1c0';
+  const serperApiKey = process.env.SERPER_API_KEY?.trim();
+  if (!serperApiKey) {
+    throw new Error('SERPER_API_KEY environment variable is not set. Cannot verify index status.');
+  }
 
   try {
     const response = await axios.post(

@@ -1,8 +1,9 @@
-import { IndexingAdapter, AdapterType, AdapterResult, SubmissionContext } from './adapter.interface';
+import { IndexingAdapter, AdapterType, AdapterTier, AdapterResult, SubmissionContext } from './adapter.interface';
 
 export class DryRunAdapter implements IndexingAdapter {
   readonly name = 'Dry Run';
   readonly type: AdapterType = 'api';
+  readonly tier: AdapterTier = 'primary';
 
   isConfigured(): boolean {
     // Active by default (fallback) unless explicitly disabled with INDEXING_DRY_RUN=false
@@ -17,7 +18,9 @@ export class DryRunAdapter implements IndexingAdapter {
     return {
       adapter: this.name,
       success: true,
-      detail: `Validated ${new URL(url).hostname}; no live indexing provider configured`,
+      tier: this.tier,
+      detail: `[DRY RUN] Validated ${new URL(url).hostname}; no live indexing provider configured — URL was NOT actually submitted`,
     };
   }
 }
+

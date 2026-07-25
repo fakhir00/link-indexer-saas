@@ -1,4 +1,4 @@
-import { IndexingAdapter, AdapterType, AdapterResult, SubmissionContext } from './adapter.interface';
+import { IndexingAdapter, AdapterType, AdapterTier, AdapterResult, SubmissionContext } from './adapter.interface';
 
 function get(endpoint: string, timeoutMs: number) {
   const controller = new AbortController();
@@ -12,6 +12,7 @@ function get(endpoint: string, timeoutMs: number) {
 export class SitemapAdapter implements IndexingAdapter {
   readonly name = 'Sitemap Ping';
   readonly type: AdapterType = 'ping';
+  readonly tier: AdapterTier = 'supplementary';
   private timeoutMs: number;
 
   constructor() {
@@ -29,8 +30,9 @@ export class SitemapAdapter implements IndexingAdapter {
     const sitemapUrl = `${parsedUrl.origin}/sitemap.xml`;
     const encodedSitemapUrl = encodeURIComponent(sitemapUrl);
 
+    // NOTE: Google deprecated google.com/ping?sitemap= in July 2023 — removed.
+    // Only Bing's sitemap ping endpoint is still functional.
     const endpoints = [
-      `https://www.google.com/ping?sitemap=${encodedSitemapUrl}`,
       `https://www.bing.com/ping?sitemap=${encodedSitemapUrl}`
     ];
 
@@ -56,7 +58,9 @@ export class SitemapAdapter implements IndexingAdapter {
     return {
       adapter: this.name,
       success: true,
-      detail: `Sitemap pinged to ${successes} search engines`,
+      tier: this.tier,
+      detail: `Sitemap pinged to ${successes} search engine(s) (supplementary — does not guarantee indexing)`,
     };
   }
 }
+
